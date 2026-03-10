@@ -730,14 +730,6 @@ textarea {
     border: 1px solid #e5e7eb;
 }
 
-.timeline-bar-name {
-    display: none;
-}
-
-.timeline-bar-dates {
-    display: none;
-}
-
 .timeline-bar-label {
     display: block;
 }

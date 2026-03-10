@@ -600,6 +600,11 @@ async function initApp() {
             const milestones = items.filter(i => i.type === 'milestone');
             const activities = items.filter(i => i.type === 'activity');
 
+            // Clear previous row assignments
+            activities.forEach(activity => {
+                delete activity.assignedRow;
+            });
+
             // Render milestones first (at top)
             milestones.forEach(item => {
                 const itemDate = new Date(item.date);
@@ -615,7 +620,7 @@ async function initApp() {
                 `;
             });
 
-            // Render activities - each on a completely separate row
+            // Render activities - smart row placement to fit non-overlapping activities on same row
             activities.forEach((item, activityIndex) => {
                 const start = new Date(item.startDate);
                 const end = new Date(item.endDate);
@@ -624,10 +629,43 @@ async function initApp() {
                 const left = daysFromStart * pixelsPerDay;
                 const width = duration * pixelsPerDay;
 
+                // Find the first available row where this activity doesn't overlap with existing activities
+                let rowIndex = 0;
+                let foundRow = false;
+
+                // Track occupied spaces in each row
+                if (!item.assignedRow) {
+                    // Check each row to see if this activity fits
+                    while (!foundRow) {
+                        let canFit = true;
+
+                        // Check all previously placed activities in this row
+                        for (let i = 0; i < activityIndex; i++) {
+                            const prevItem = activities[i];
+                            if (prevItem.assignedRow === rowIndex) {
+                                const prevStart = new Date(prevItem.startDate);
+                                const prevEnd = new Date(prevItem.endDate);
+
+                                // Check if there's overlap (with 1 day buffer for spacing)
+                                if (!(end < prevStart || start > prevEnd)) {
+                                    canFit = false;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (canFit) {
+                            item.assignedRow = rowIndex;
+                            foundRow = true;
+                        } else {
+                            rowIndex++;
+                        }
+                    }
+                }
+
                 // Activities start below milestones (if any)
                 const milestoneHeight = milestones.length > 0 ? 65 : 0;
-                const rowIndex = activityIndex;
-                const top = milestoneHeight + (rowIndex * 40) + 5; // 40px spacing between rows
+                const top = milestoneHeight + (item.assignedRow * 40) + 5; // 40px spacing between rows
 
                 const status = item.status || 'not-started';
                 const startDateStr = formatDateShort(item.startDate);
@@ -642,8 +680,12 @@ async function initApp() {
                 `;
             });
 
+            // Calculate total rows needed
+            const maxRow = Math.max(...activities.map(a => a.assignedRow || 0), -1) + 1;
+            const totalActivityHeight = maxRow * 40;
+
             const milestoneHeight = milestones.length > 0 ? 65 : 0;
-            const minHeight = Math.max(milestoneHeight + (activities.length * 40) + 20, 100);
+            const minHeight = Math.max(milestoneHeight + totalActivityHeight + 20, 100);
             html += `</div></div>`;
 
             const lastIndex = html.lastIndexOf('<div class="workstream-rows">');
