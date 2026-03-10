@@ -2,9 +2,20 @@
 
 A web-based tool to create and manage visual project timelines with multiple workstreams, activities, and milestones.
 
+## 🌐 Live Application
+
+**Access the app here:** [https://kushaalchoudri.github.io/roadmap-generator/home.html](https://kushaalchoudri.github.io/roadmap-generator/home.html)
+
 ## 🎯 Getting Started
 
-**Start Here**: Open `home.html` in your browser to begin!
+### Local Development
+Open `home.html` in your browser to begin!
+
+### Shared Database (Team Collaboration)
+To enable team-wide shared roadmaps, set up Firebase by following the [Firebase Setup Guide](FIREBASE_SETUP.md).
+
+**Without Firebase:** Roadmaps are saved locally in your browser (only you can see them)
+**With Firebase:** All team members see the same roadmaps and can collaborate in real-time!
 
 ## ✨ Key Features
 

@@ -3,26 +3,50 @@ let roadmapItems = [];
 let appInitialized = false;
 let currentRoadmapId = null;
 
+// Check if Firebase is initialized
+const useFirebase = typeof firebase !== 'undefined' && typeof db !== 'undefined';
+
 // Get roadmap ID from URL
 function getRoadmapIdFromUrl() {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get('id');
 }
 
-// Load all roadmaps from localStorage
-function loadAllRoadmaps() {
-    const data = localStorage.getItem('allRoadmaps');
-    return data ? JSON.parse(data) : {};
+// Load all roadmaps from localStorage or Firebase
+async function loadAllRoadmaps() {
+    if (useFirebase) {
+        try {
+            const snapshot = await db.collection('roadmaps').get();
+            const roadmaps = {};
+            snapshot.forEach(doc => {
+                roadmaps[doc.id] = doc.data();
+            });
+            return roadmaps;
+        } catch (error) {
+            console.error('Error loading from Firebase:', error);
+            return {};
+        }
+    } else {
+        const data = localStorage.getItem('allRoadmaps');
+        return data ? JSON.parse(data) : {};
+    }
 }
 
-// Save all roadmaps to localStorage
-function saveAllRoadmaps(roadmaps) {
-    localStorage.setItem('allRoadmaps', JSON.stringify(roadmaps));
+// Save all roadmaps to localStorage or Firebase
+async function saveAllRoadmaps(roadmaps) {
+    if (useFirebase) {
+        // Not typically used with Firebase, we update documents directly
+        for (const [id, roadmap] of Object.entries(roadmaps)) {
+            await db.collection('roadmaps').doc(id).set(roadmap);
+        }
+    } else {
+        localStorage.setItem('allRoadmaps', JSON.stringify(roadmaps));
+    }
 }
 
 // Load current roadmap data
-function loadCurrentRoadmap() {
-    const roadmaps = loadAllRoadmaps();
+async function loadCurrentRoadmap() {
+    const roadmaps = await loadAllRoadmaps();
     const roadmap = roadmaps[currentRoadmapId];
 
     if (roadmap) {
@@ -34,24 +58,47 @@ function loadCurrentRoadmap() {
 }
 
 // Save current roadmap
-function saveCurrentRoadmap() {
+async function saveCurrentRoadmap() {
     if (!currentRoadmapId) return;
 
-    const roadmaps = loadAllRoadmaps();
-    if (roadmaps[currentRoadmapId]) {
-        roadmaps[currentRoadmapId].items = roadmapItems;
-        roadmaps[currentRoadmapId].lastModified = Date.now();
-        saveAllRoadmaps(roadmaps);
+    if (useFirebase) {
+        try {
+            await db.collection('roadmaps').doc(currentRoadmapId).update({
+                items: roadmapItems,
+                lastModified: Date.now()
+            });
+        } catch (error) {
+            console.error('Error saving to Firebase:', error);
+            // Fallback: try set instead of update (in case document doesn't exist)
+            try {
+                const roadmaps = await loadAllRoadmaps();
+                const roadmap = roadmaps[currentRoadmapId];
+                if (roadmap) {
+                    roadmap.items = roadmapItems;
+                    roadmap.lastModified = Date.now();
+                    await db.collection('roadmaps').doc(currentRoadmapId).set(roadmap);
+                }
+            } catch (setError) {
+                console.error('Error with set fallback:', setError);
+            }
+        }
+    } else {
+        const roadmaps = await loadAllRoadmaps();
+        if (roadmaps[currentRoadmapId]) {
+            roadmaps[currentRoadmapId].items = roadmapItems;
+            roadmaps[currentRoadmapId].lastModified = Date.now();
+            await saveAllRoadmaps(roadmaps);
+        }
     }
 }
 
 // Save data to the current roadmap
-function saveData() {
+async function saveData() {
     try {
-        saveCurrentRoadmap();
+        await saveCurrentRoadmap();
         console.log('Data saved successfully');
     } catch (error) {
-        console.error('Error saving to localStorage:', error);
+        console.error('Error saving data:', error);
         alert('Warning: Unable to save data. Your items may not persist after refreshing the page.');
     }
 }
@@ -86,7 +133,7 @@ function createWorkstreamDatalist(input) {
 }
 
 // Initialize when DOM is ready
-function initApp() {
+async function initApp() {
     // Prevent double initialization
     if (appInitialized) return;
 
@@ -103,7 +150,7 @@ function initApp() {
     console.log('App initialized successfully');
 
     // Load current roadmap
-    const roadmap = loadCurrentRoadmap();
+    const roadmap = await loadCurrentRoadmap();
     if (!roadmap) {
         alert('Roadmap not found. Redirecting to home...');
         window.location.href = 'home.html';
@@ -135,13 +182,13 @@ function initApp() {
     });
 
     // Save roadmap button
-    saveRoadmapBtn.addEventListener('click', () => {
-        saveCurrentRoadmap();
+    saveRoadmapBtn.addEventListener('click', async () => {
+        await saveCurrentRoadmap();
         alert('Roadmap saved successfully!');
     });
 
     // Add new row button
-    addRowBtn.addEventListener('click', () => {
+    addRowBtn.addEventListener('click', async () => {
         const newItem = {
             id: Date.now(),
             workstream: '',
@@ -154,17 +201,17 @@ function initApp() {
         };
         roadmapItems.push(newItem);
         renderTable();
-        saveData();
+        await saveData();
 
         // Show save button
         saveRoadmapBtn.style.display = 'block';
     });
 
     // Clear all button
-    clearBtn.addEventListener('click', () => {
+    clearBtn.addEventListener('click', async () => {
         if (confirm('Are you sure you want to clear all items? This cannot be undone.')) {
             roadmapItems = [];
-            saveData();
+            await saveData();
             renderTable();
             renderTimeline();
             saveRoadmapBtn.style.display = 'none';
@@ -613,10 +660,10 @@ function initApp() {
 }
 
 // Global function for deleting rows
-function deleteRow(id) {
+async function deleteRow(id) {
     if (confirm('Are you sure you want to delete this item?')) {
         roadmapItems = roadmapItems.filter(item => item.id != id);
-        saveData();
+        await saveData();
 
         // Re-initialize to refresh everything
         const event = new Event('reinit');

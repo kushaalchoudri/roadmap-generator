@@ -1,12 +1,40 @@
+// Check if Firebase is initialized
+const useFirebase = typeof firebase !== 'undefined' && typeof db !== 'undefined';
+
 // Load all saved roadmaps
-function loadRoadmaps() {
-    const roadmapsData = localStorage.getItem('allRoadmaps');
-    return roadmapsData ? JSON.parse(roadmapsData) : {};
+async function loadRoadmaps() {
+    if (useFirebase) {
+        try {
+            const snapshot = await db.collection('roadmaps').get();
+            const roadmaps = {};
+            snapshot.forEach(doc => {
+                roadmaps[doc.id] = doc.data();
+            });
+            return roadmaps;
+        } catch (error) {
+            console.error('Error loading from Firebase:', error);
+            alert('Error loading roadmaps from database. Please check your connection.');
+            return {};
+        }
+    } else {
+        // Fallback to localStorage
+        const roadmapsData = localStorage.getItem('allRoadmaps');
+        return roadmapsData ? JSON.parse(roadmapsData) : {};
+    }
 }
 
 // Save all roadmaps
-function saveRoadmaps(roadmaps) {
-    localStorage.setItem('allRoadmaps', JSON.stringify(roadmaps));
+async function saveRoadmaps(roadmaps) {
+    if (useFirebase) {
+        // Save to Firebase - we'll update individual documents
+        // This function is less used now as we update documents directly
+        for (const [id, roadmap] of Object.entries(roadmaps)) {
+            await db.collection('roadmaps').doc(id).set(roadmap);
+        }
+    } else {
+        // Fallback to localStorage
+        localStorage.setItem('allRoadmaps', JSON.stringify(roadmaps));
+    }
 }
 
 // Get current roadmap ID from URL or localStorage
@@ -21,8 +49,8 @@ function setCurrentRoadmapId(id) {
 }
 
 // Render roadmaps list
-function renderRoadmapsList() {
-    const roadmaps = loadRoadmaps();
+async function renderRoadmapsList() {
+    const roadmaps = await loadRoadmaps();
     const roadmapsList = document.getElementById('roadmapsList');
 
     const roadmapIds = Object.keys(roadmaps);
@@ -83,24 +111,35 @@ function renderRoadmapsList() {
 }
 
 // Create new roadmap
-function createNewRoadmap() {
-    showModal('Create New Roadmap', '', (name) => {
+async function createNewRoadmap() {
+    showModal('Create New Roadmap', '', async (name) => {
         if (!name.trim()) {
             alert('Please enter a program name');
             return;
         }
 
-        const roadmaps = loadRoadmaps();
         const id = Date.now().toString();
-
-        roadmaps[id] = {
+        const roadmapData = {
             name: name.trim(),
             items: [],
             created: Date.now(),
             lastModified: Date.now()
         };
 
-        saveRoadmaps(roadmaps);
+        if (useFirebase) {
+            try {
+                await db.collection('roadmaps').doc(id).set(roadmapData);
+            } catch (error) {
+                console.error('Error saving to Firebase:', error);
+                alert('Error creating roadmap. Please try again.');
+                return;
+            }
+        } else {
+            const roadmaps = await loadRoadmaps();
+            roadmaps[id] = roadmapData;
+            await saveRoadmaps(roadmaps);
+        }
+
         setCurrentRoadmapId(id);
         window.location.href = `index.html?id=${id}`;
     });
@@ -113,13 +152,13 @@ function openRoadmap(id) {
 }
 
 // Rename roadmap
-function renameRoadmap(id) {
-    const roadmaps = loadRoadmaps();
+async function renameRoadmap(id) {
+    const roadmaps = await loadRoadmaps();
     const roadmap = roadmaps[id];
 
     if (!roadmap) return;
 
-    showModal('Rename Roadmap', roadmap.name, (newName) => {
+    showModal('Rename Roadmap', roadmap.name, async (newName) => {
         if (!newName.trim()) {
             alert('Please enter a program name');
             return;
@@ -127,28 +166,54 @@ function renameRoadmap(id) {
 
         roadmap.name = newName.trim();
         roadmap.lastModified = Date.now();
-        saveRoadmaps(roadmaps);
-        renderRoadmapsList();
+
+        if (useFirebase) {
+            try {
+                await db.collection('roadmaps').doc(id).update({
+                    name: roadmap.name,
+                    lastModified: roadmap.lastModified
+                });
+            } catch (error) {
+                console.error('Error updating Firebase:', error);
+                alert('Error renaming roadmap. Please try again.');
+                return;
+            }
+        } else {
+            roadmaps[id] = roadmap;
+            await saveRoadmaps(roadmaps);
+        }
+
+        await renderRoadmapsList();
     });
 }
 
 // Delete roadmap
-function deleteRoadmap(id) {
-    const roadmaps = loadRoadmaps();
+async function deleteRoadmap(id) {
+    const roadmaps = await loadRoadmaps();
     const roadmap = roadmaps[id];
 
     if (!roadmap) return;
 
     if (confirm(`Are you sure you want to delete "${roadmap.name}"? This cannot be undone.`)) {
-        delete roadmaps[id];
-        saveRoadmaps(roadmaps);
+        if (useFirebase) {
+            try {
+                await db.collection('roadmaps').doc(id).delete();
+            } catch (error) {
+                console.error('Error deleting from Firebase:', error);
+                alert('Error deleting roadmap. Please try again.');
+                return;
+            }
+        } else {
+            delete roadmaps[id];
+            await saveRoadmaps(roadmaps);
+        }
 
         // Clear current roadmap if it's the one being deleted
         if (getCurrentRoadmapId() === id) {
             localStorage.removeItem('currentRoadmapId');
         }
 
-        renderRoadmapsList();
+        await renderRoadmapsList();
     }
 }
 
