@@ -646,8 +646,10 @@ async function initApp() {
                                 const prevStart = new Date(prevItem.startDate);
                                 const prevEnd = new Date(prevItem.endDate);
 
-                                // Check if there's overlap (with 1 day buffer for spacing)
-                                if (!(end < prevStart || start > prevEnd)) {
+                                // Check if there's overlap
+                                // Activities can share a row if one ends before the other starts
+                                // No overlap if: current starts AFTER previous ends, OR current ends BEFORE previous starts
+                                if (!(start > prevEnd || end < prevStart)) {
                                     canFit = false;
                                     break;
                                 }
