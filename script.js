@@ -563,7 +563,7 @@ async function initApp() {
         if (generalMilestones.length > 0) {
             html += `<div class="timeline-workstream">`;
             html += `<div class="workstream-header milestones">Milestones</div>`;
-            html += `<div class="workstream-rows" style="min-height: 90px; padding-top: 0;">`;
+            html += `<div class="workstream-rows" style="min-height: 65px; padding-top: 0;">`;
 
             // Add week lines
             html += weekLineHtml;
@@ -625,9 +625,9 @@ async function initApp() {
                 const width = duration * pixelsPerDay;
 
                 // Activities start below milestones (if any)
-                const milestoneHeight = milestones.length > 0 ? 90 : 0;
+                const milestoneHeight = milestones.length > 0 ? 65 : 0;
                 const rowIndex = activityIndex;
-                const top = milestoneHeight + (rowIndex * 50) + 5; // 50px spacing between rows
+                const top = milestoneHeight + (rowIndex * 40) + 5; // 40px spacing between rows
 
                 const status = item.status || 'not-started';
                 const startDateStr = formatDateShort(item.startDate);
@@ -642,8 +642,8 @@ async function initApp() {
                 `;
             });
 
-            const milestoneHeight = milestones.length > 0 ? 90 : 0;
-            const minHeight = Math.max(milestoneHeight + (activities.length * 50) + 20, 120);
+            const milestoneHeight = milestones.length > 0 ? 65 : 0;
+            const minHeight = Math.max(milestoneHeight + (activities.length * 40) + 20, 100);
             html += `</div></div>`;
 
             const lastIndex = html.lastIndexOf('<div class="workstream-rows">');

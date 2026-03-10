@@ -627,14 +627,14 @@ textarea {
 .workstream-rows {
     flex: 1;
     position: relative;
-    min-height: 120px;
+    min-height: 100px;
     padding-top: 5px;
 }
 
 .timeline-milestone {
     position: absolute;
-    width: 24px;
-    height: 80px;
+    width: 20px;
+    height: 55px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -649,26 +649,26 @@ textarea {
 
 .timeline-bar {
     position: absolute;
-    height: 28px;
-    border-radius: 8px;
+    height: 22px;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    padding: 0 12px;
+    padding: 0 8px 0 12px;
     color: white;
     font-size: 11px;
     font-weight: 600;
     overflow: visible;
-    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
     cursor: pointer;
     transition: all 0.3s ease;
     z-index: 3;
     border: 2px solid rgba(255, 255, 255, 0.3);
+    clip-path: polygon(0 0, calc(100% - 11px) 0, 100% 50%, calc(100% - 11px) 100%, 0 100%);
 }
 
 .timeline-bar:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
 /* Status-based colors with gradients */
@@ -690,10 +690,10 @@ textarea {
 
 .timeline-bar-label {
     position: absolute;
-    top: -22px;
+    top: -20px;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 400;
     color: #000;
     white-space: nowrap;
@@ -702,31 +702,31 @@ textarea {
 
 .timeline-bar-start-date {
     position: absolute;
-    left: -70px;
+    left: -55px;
     top: 50%;
     transform: translateY(-50%);
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
     color: #4b5563;
     white-space: nowrap;
     background: #f3f4f6;
-    padding: 3px 8px;
-    border-radius: 4px;
+    padding: 2px 6px;
+    border-radius: 3px;
     border: 1px solid #e5e7eb;
 }
 
 .timeline-bar-end-date {
     position: absolute;
-    right: -70px;
+    right: -55px;
     top: 50%;
     transform: translateY(-50%);
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
     color: #4b5563;
     white-space: nowrap;
     background: #f3f4f6;
-    padding: 3px 8px;
-    border-radius: 4px;
+    padding: 2px 6px;
+    border-radius: 3px;
     border: 1px solid #e5e7eb;
 }
 
@@ -839,35 +839,35 @@ textarea {
 }
 
 .milestone-diamond {
-    width: 28px;
-    height: 28px;
+    width: 20px;
+    height: 20px;
     background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
     transform: rotate(45deg);
-    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
+    box-shadow: 0 3px 8px rgba(249, 115, 22, 0.4);
     position: relative;
     border: 2px solid #fff;
 }
 
 .milestone-label {
-    margin-top: 12px;
-    font-size: 11px;
-    font-weight: 400;
+    margin-top: 8px;
+    font-size: 10px;
+    font-weight: 600;
     color: #000;
     white-space: nowrap;
     background: transparent;
-    padding: 4px 10px;
-    border-radius: 6px;
+    padding: 0;
+    border-radius: 0;
 }
 
 .milestone-date {
-    margin-top: 4px;
-    font-size: 10px;
+    margin-top: 2px;
+    font-size: 9px;
     font-weight: 400;
-    color: #000;
+    color: #666;
     white-space: nowrap;
     background: transparent;
-    padding: 3px 8px;
-    border-radius: 4px;
+    padding: 0;
+    border-radius: 0;
 }
 
 @media (max-width: 768px) {
