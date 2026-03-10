@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chrome Test</title>
+</head>
+<body>
+    <h1>Chrome JavaScript Test</h1>
+    <button id="testBtn">Click Me</button>
+    <p id="result">Waiting...</p>
+
+    <script>
+        console.log('Script loaded');
+
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOMContentLoaded fired');
+            const btn = document.getElementById('testBtn');
+            const result = document.getElementById('result');
+
+            if (btn && result) {
+                result.textContent = 'Elements found! Click the button.';
+                btn.addEventListener('click', function() {
+                    result.textContent = 'Button clicked! JavaScript is working.';
+                    alert('Chrome JavaScript is working!');
+                });
+            } else {
+                result.textContent = 'ERROR: Elements not found';
+            }
+        });
+    </script>
+</body>
+</html>

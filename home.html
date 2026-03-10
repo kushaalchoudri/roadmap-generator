@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Roadmap Generator - Home</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Project Roadmap Generator</h1>
+            <p>Manage and create visual timelines for your projects</p>
+        </header>
+
+        <div class="home-section">
+            <div class="home-header">
+                <h2>Your Roadmaps</h2>
+                <button id="createNewBtn" class="btn btn-primary">
+                    <svg style="width: 16px; height: 16px; display: inline-block; margin-right: 5px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    Create New Roadmap
+                </button>
+            </div>
+
+            <div id="roadmapsList" class="roadmaps-list"></div>
+        </div>
+    </div>
+
+    <!-- Create/Rename Modal -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <h3 id="modalTitle">Create New Roadmap</h3>
+            <div class="form-group">
+                <label for="programName">Program Name:</label>
+                <input type="text" id="programName" placeholder="e.g., Product Launch 2024" autofocus>
+            </div>
+            <div class="modal-actions">
+                <button id="modalSave" class="btn btn-primary">Save</button>
+                <button id="modalCancel" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="home.js"></script>
+</body>
+</html>

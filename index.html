@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Roadmap Generator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="roadmap-page-header">
+                <div class="roadmap-title-container">
+                    <h1>Project Roadmap Generator</h1>
+                    <span id="currentRoadmapName" class="current-roadmap-name"></span>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button id="saveRoadmapBtn" class="btn btn-save-roadmap" style="display: none;">Save Roadmap</button>
+                    <button id="backToHomeBtn" class="btn btn-back">
+                        <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                        </svg>
+                        Back to Home
+                    </button>
+                </div>
+            </div>
+            <p>Create visual timelines for your project activities across multiple workstreams</p>
+        </header>
+
+        <div class="form-section">
+            <div class="form-header">
+                <h2>Activities & Milestones</h2>
+                <button id="addRowBtn" class="btn btn-primary">+ Add New Item</button>
+            </div>
+
+            <div class="table-container">
+                <table id="itemsTable" class="items-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 150px;">Workstream</th>
+                            <th style="width: 120px;">Type</th>
+                            <th style="width: 200px;">Activity Name</th>
+                            <th style="width: 130px;">Start Date</th>
+                            <th style="width: 130px;">End Date</th>
+                            <th style="width: 130px;">Status</th>
+                            <th style="width: 250px;">Description</th>
+                            <th style="width: 80px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Rows will be added dynamically -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="emptyState" class="empty-state-table">
+                <p>No items yet. Click "Add New Item" to start building your roadmap.</p>
+            </div>
+        </div>
+
+        <div class="timeline-section">
+            <div class="timeline-header">
+                <h2>Project Timeline</h2>
+                <div class="timeline-legend">
+                    <div class="legend-item">
+                        <span class="legend-box not-started"></span>
+                        <span>Not Started</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-box in-progress"></span>
+                        <span>In Progress</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-box at-risk"></span>
+                        <span>At Risk</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-box completed"></span>
+                        <span>Completed</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-diamond"></span>
+                        <span>Milestone</span>
+                    </div>
+                </div>
+                <div class="timeline-controls">
+                    <button id="downloadBtn" class="btn btn-secondary">Download as Image</button>
+                    <button id="clearBtn" class="btn btn-danger">Clear All</button>
+                </div>
+            </div>
+            <div id="timeline" class="timeline-canvas"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

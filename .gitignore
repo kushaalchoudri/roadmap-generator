@@ -1,0 +1,14 @@
+# Firebase config (will be added later)
+firebase-config.js
+
+# Mac
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
