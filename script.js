@@ -674,7 +674,8 @@ async function initApp() {
                 const endDateStr = formatDateShort(item.endDate);
 
                 html += `
-                    <div class="timeline-bar ${status}" style="left: ${left}px; width: ${width}px; top: ${top}px; z-index: 3;" title="${escapeHtml(item.name)}\n${startDateStr} - ${endDateStr}">
+                    <div class="timeline-bar" style="left: ${left}px; width: ${width}px; top: ${top}px; z-index: 3;" title="${escapeHtml(item.name)}\n${startDateStr} - ${endDateStr}">
+                        <div class="timeline-bar-shape ${status}"></div>
                         <div class="timeline-bar-label">${escapeHtml(item.name)}</div>
                         <div class="timeline-bar-start-date">${startDateStr}</div>
                         <div class="timeline-bar-end-date">${endDateStr}</div>
