@@ -469,6 +469,37 @@ textarea {
     color: #333;
 }
 
+.timeline-view-toggle {
+    display: flex;
+    gap: 5px;
+    background: #f3f4f6;
+    padding: 4px;
+    border-radius: 8px;
+}
+
+.btn-view-toggle {
+    padding: 8px 16px;
+    border: none;
+    background: transparent;
+    color: #666;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.btn-view-toggle:hover {
+    background: #e5e7eb;
+    color: #333;
+}
+
+.btn-view-toggle.active {
+    background: white;
+    color: #667eea;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
 .timeline-legend {
     display: flex;
     gap: 15px;
@@ -659,9 +690,15 @@ textarea {
     font-size: 11px;
     font-weight: 600;
     overflow: visible !important;
-    cursor: pointer;
+    cursor: move;
     transition: all 0.3s ease;
     z-index: 3;
+}
+
+.timeline-bar.dragging {
+    opacity: 0.7;
+    cursor: grabbing !important;
+    z-index: 999;
 }
 
 .timeline-bar-shape {
@@ -686,6 +723,31 @@ textarea {
 
 .timeline-bar:hover .timeline-bar-shape {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+/* Drag handles */
+.timeline-bar-drag-handle-start,
+.timeline-bar-drag-handle-end {
+    position: absolute;
+    width: 10px;
+    height: 100%;
+    top: 0;
+    cursor: ew-resize;
+    z-index: 10;
+    background: transparent;
+}
+
+.timeline-bar-drag-handle-start {
+    left: 0;
+}
+
+.timeline-bar-drag-handle-end {
+    right: 0;
+}
+
+.timeline-bar-drag-handle-start:hover,
+.timeline-bar-drag-handle-end:hover {
+    background: rgba(255, 255, 255, 0.3);
 }
 
 /* Status-based colors with gradients */
@@ -716,6 +778,7 @@ textarea {
     white-space: nowrap !important;
     z-index: 4 !important;
     display: block !important;
+    pointer-events: none !important;
 }
 
 .timeline-bar-start-date {
@@ -724,14 +787,11 @@ textarea {
     top: 50% !important;
     transform: translateY(-50%) !important;
     font-size: 10px !important;
-    font-weight: 600 !important;
-    color: #4b5563 !important;
+    font-weight: 500 !important;
+    color: #6b7280 !important;
     white-space: nowrap !important;
-    background: #f3f4f6 !important;
-    padding: 2px 6px !important;
-    border-radius: 3px !important;
-    border: 1px solid #e5e7eb !important;
     display: block !important;
+    pointer-events: none !important;
 }
 
 .timeline-bar-end-date {
@@ -748,6 +808,7 @@ textarea {
     border-radius: 3px !important;
     border: 1px solid #e5e7eb !important;
     display: block !important;
+    pointer-events: none !important;
 }
 
 /* Week separator lines */
@@ -760,6 +821,33 @@ textarea {
     pointer-events: none;
     z-index: 1;
     opacity: 0.4;
+}
+
+.today-marker {
+    position: absolute;
+    width: 2px;
+    background: linear-gradient(to bottom, transparent 0%, #ef4444 5%, #ef4444 95%, transparent 100%);
+    top: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 5;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+}
+
+.today-marker::before {
+    content: 'TODAY';
+    position: absolute;
+    top: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #ef4444;
+    color: white;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 3px;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .timeline-content {
