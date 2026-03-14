@@ -177,6 +177,11 @@ async function initApp() {
     const viewQuarterBtn = document.getElementById('viewQuarterBtn');
     const viewYearBtn = document.getElementById('viewYearBtn');
 
+    // View toggle buttons
+    const viewMonthBtn = document.getElementById('viewMonthBtn');
+    const viewQuarterBtn = document.getElementById('viewQuarterBtn');
+    const viewYearBtn = document.getElementById('viewYearBtn');
+
     // Set roadmap name
     currentRoadmapName.textContent = roadmap.name;
 
@@ -227,27 +232,37 @@ async function initApp() {
         }
     });
 
-    // View toggle buttons
-    viewMonthBtn.addEventListener('click', () => {
-        currentView = 'month';
-        document.querySelectorAll('.btn-view-toggle').forEach(btn => btn.classList.remove('active'));
-        viewMonthBtn.classList.add('active');
-        renderTimeline();
-    });
+    // View toggle buttons with null checks
+    console.log('View buttons:', viewMonthBtn, viewQuarterBtn, viewYearBtn);
+    if (viewMonthBtn) {
+        viewMonthBtn.addEventListener('click', () => {
+            console.log('Month button clicked');
+            currentView = 'month';
+            document.querySelectorAll('.btn-view-toggle').forEach(btn => btn.classList.remove('active'));
+            viewMonthBtn.classList.add('active');
+            renderTimeline();
+        });
+    }
 
-    viewQuarterBtn.addEventListener('click', () => {
-        currentView = 'quarter';
-        document.querySelectorAll('.btn-view-toggle').forEach(btn => btn.classList.remove('active'));
-        viewQuarterBtn.classList.add('active');
-        renderTimeline();
-    });
+    if (viewQuarterBtn) {
+        viewQuarterBtn.addEventListener('click', () => {
+            console.log('Quarter button clicked');
+            currentView = 'quarter';
+            document.querySelectorAll('.btn-view-toggle').forEach(btn => btn.classList.remove('active'));
+            viewQuarterBtn.classList.add('active');
+            renderTimeline();
+        });
+    }
 
-    viewYearBtn.addEventListener('click', () => {
-        currentView = 'year';
-        document.querySelectorAll('.btn-view-toggle').forEach(btn => btn.classList.remove('active'));
-        viewYearBtn.classList.add('active');
-        renderTimeline();
-    });
+    if (viewYearBtn) {
+        viewYearBtn.addEventListener('click', () => {
+            console.log('Year button clicked');
+            currentView = 'year';
+            document.querySelectorAll('.btn-view-toggle').forEach(btn => btn.classList.remove('active'));
+            viewYearBtn.classList.add('active');
+            renderTimeline();
+        });
+    }
 
     // Download timeline as image
     downloadBtn.addEventListener('click', async () => {
@@ -445,6 +460,8 @@ async function initApp() {
 
     // Enhanced renderTimeline function with drag-and-drop, view modes, today marker, and smart positioning
     function renderTimeline() {
+        console.log('renderTimeline called with view:', currentView);
+
         if (roadmapItems.length === 0) {
             timelineCanvas.innerHTML = `
                 <div class="empty-state">
@@ -654,10 +671,14 @@ async function initApp() {
         // Add TODAY marker
         const today = new Date();
         today.setHours(0, 0, 0, 0);
+        console.log('Today date:', today, 'Min:', minDate, 'Max:', maxDate);
         if (today >= minDate && today <= maxDate) {
             const todayDays = Math.ceil((today - minDate) / (1000 * 60 * 60 * 24));
             const todayLeft = todayDays * pixelsPerDay;
+            console.log('Adding today marker at:', todayLeft, 'px');
             gridLinesHtml += `<div class="today-marker" style="left: ${todayLeft}px;"></div>`;
+        } else {
+            console.log('Today is outside timeline range');
         }
 
         // General milestones
@@ -721,8 +742,8 @@ async function initApp() {
                 const left = daysFromStart * pixelsPerDay;
                 const width = duration * pixelsPerDay;
 
-                // Calculate text width estimates (approximate)
-                const textPadding = 120; // Extra space for start/end dates and label
+                // Calculate text width estimates (approximate) - increased padding for better spacing
+                const textPadding = 180; // Extra space for start/end dates and label (increased from 120)
                 const visualWidth = width + textPadding;
 
                 // Find non-overlapping row
