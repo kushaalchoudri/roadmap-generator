@@ -177,11 +177,6 @@ async function initApp() {
     const viewQuarterBtn = document.getElementById('viewQuarterBtn');
     const viewYearBtn = document.getElementById('viewYearBtn');
 
-    // View toggle buttons
-    const viewMonthBtn = document.getElementById('viewMonthBtn');
-    const viewQuarterBtn = document.getElementById('viewQuarterBtn');
-    const viewYearBtn = document.getElementById('viewYearBtn');
-
     // Set roadmap name
     currentRoadmapName.textContent = roadmap.name;
 

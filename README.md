@@ -9,13 +9,22 @@ A web-based tool to create and manage visual project timelines with multiple wor
 ## 🎯 Getting Started
 
 ### Local Development
-Open `home.html` in your browser to begin!
+1. Clone the repository or download the files
+2. Create `firebase-config.js` (optional - see Firebase Setup below)
+3. Open `home.html` in your browser to begin!
 
-### Shared Database (Team Collaboration)
-To enable team-wide shared roadmaps, set up Firebase by following the [Firebase Setup Guide](FIREBASE_SETUP.md).
+### Firebase Setup (Optional - For Team Collaboration)
+The app works perfectly fine **without** Firebase using browser localStorage. Firebase is only needed if you want to share roadmaps across your team.
 
 **Without Firebase:** Roadmaps are saved locally in your browser (only you can see them)
 **With Firebase:** All team members see the same roadmaps and can collaborate in real-time!
+
+To enable Firebase:
+1. Copy `firebase-config-template.js` to `firebase-config.js`
+2. Follow the [Firebase Setup Guide](FIREBASE_SETUP.md)
+3. Add your Firebase credentials to `firebase-config.js`
+
+If you skip Firebase setup, the app will automatically use localStorage and work just fine!
 
 ## ✨ Key Features
 

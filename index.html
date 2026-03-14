@@ -9,7 +9,7 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <script src="firebase-config.js"></script>
+    <script src="firebase-config.js" onerror="console.log('Firebase config not found, using localStorage')"></script>
 </head>
 <body>
     <div class="container">
