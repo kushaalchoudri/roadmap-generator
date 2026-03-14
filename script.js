@@ -51,19 +51,25 @@ async function saveAllRoadmaps(roadmaps) {
 // Load current roadmap data
 async function loadCurrentRoadmap() {
     const roadmaps = await loadAllRoadmaps();
+    console.log('All roadmaps loaded:', roadmaps);
+    console.log('Current roadmap ID:', currentRoadmapId);
     const roadmap = roadmaps[currentRoadmapId];
 
     if (roadmap) {
         roadmapItems = roadmap.items || [];
+        console.log('Loaded roadmap items:', roadmapItems.length, 'items');
         return roadmap;
     }
 
+    console.log('No roadmap found for ID:', currentRoadmapId);
     return null;
 }
 
 // Save current roadmap
 async function saveCurrentRoadmap() {
     if (!currentRoadmapId) return;
+
+    console.log('Saving roadmap, items count:', roadmapItems.length);
 
     if (useFirebase) {
         try {
@@ -92,6 +98,7 @@ async function saveCurrentRoadmap() {
             roadmaps[currentRoadmapId].items = roadmapItems;
             roadmaps[currentRoadmapId].lastModified = Date.now();
             await saveAllRoadmaps(roadmaps);
+            console.log('Saved to localStorage, roadmap ID:', currentRoadmapId, 'items:', roadmapItems.length);
         }
     }
 }
@@ -302,6 +309,7 @@ async function initApp() {
 
     // Render table
     function renderTable() {
+        console.log('renderTable called, roadmapItems count:', roadmapItems.length);
         if (roadmapItems.length === 0) {
             tableBody.innerHTML = '';
             emptyState.classList.add('show');
