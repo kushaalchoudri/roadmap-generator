@@ -752,9 +752,9 @@ async function initApp() {
                         const prevItem = activities[i];
                         if (prevItem.assignedRow === rowIndex) {
                             const prevStart = new Date(prevItem.startDate);
-                            const prevEnd = new Date(prevItem.endDate);
+                            const prevEndDate = new Date(prevItem.endDate);
                             const prevDaysFromStart = Math.ceil((prevStart - minDate) / (1000 * 60 * 60 * 24));
-                            const prevDuration = Math.ceil((prevEnd - prevStart) / (1000 * 60 * 60 * 24)) + 1;
+                            const prevDuration = Math.ceil((prevEndDate - prevStart) / (1000 * 60 * 60 * 24)) + 1;
                             const prevLeft = prevDaysFromStart * pixelsPerDay;
                             const prevWidth = prevDuration * pixelsPerDay;
                             const prevVisualWidth = prevWidth + textPadding;
