@@ -667,21 +667,31 @@ async function initApp() {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         console.log('Today date:', today, 'Min:', minDate, 'Max:', maxDate);
+        let todayMarkerHtml = '';
+        let todayLabelHtml = '';
         if (today >= minDate && today <= maxDate) {
             const todayDays = Math.ceil((today - minDate) / (1000 * 60 * 60 * 24));
             const todayLeft = todayDays * pixelsPerDay;
             console.log('Adding today marker at:', todayLeft, 'px');
             gridLinesHtml += `<div class="today-marker" style="left: ${todayLeft}px;"></div>`;
+            // Create label separately to add only once
+            todayLabelHtml = `<div class="today-marker-label" style="left: ${todayLeft}px;">TODAY</div>`;
         } else {
             console.log('Today is outside timeline range');
         }
 
         // General milestones
+        let isFirstWorkstream = true;
         if (generalMilestones.length > 0) {
             html += `<div class="timeline-workstream">`;
             html += `<div class="workstream-header milestones">Milestones</div>`;
-            html += `<div class="workstream-rows" style="min-height: 65px; padding-top: 0;">`;
+            html += `<div class="workstream-rows" style="min-height: 65px; padding-top: 0; position: relative;">`;
             html += gridLinesHtml;
+            // Add TODAY label only once at the top
+            if (isFirstWorkstream && todayLabelHtml) {
+                html += todayLabelHtml;
+                isFirstWorkstream = false;
+            }
 
             generalMilestones.forEach(item => {
                 const itemDate = new Date(item.date);
@@ -708,8 +718,14 @@ async function initApp() {
 
             html += `<div class="timeline-workstream">`;
             html += `<div class="workstream-header">${escapeHtml(workstreamName)}</div>`;
-            html += `<div class="workstream-rows">`;
+            html += `<div class="workstream-rows" style="position: relative;">`;
             html += gridLinesHtml;
+
+            // Add TODAY label only on first workstream
+            if (isFirstWorkstream && todayLabelHtml) {
+                html += todayLabelHtml;
+                isFirstWorkstream = false;
+            }
 
             // Render milestones
             milestones.forEach(item => {
@@ -779,10 +795,15 @@ async function initApp() {
                 }
 
                 const milestoneHeight = milestones.length > 0 ? 65 : 0;
-                const top = milestoneHeight + (item.assignedRow * 40) + 5;
+                const top = milestoneHeight + (item.assignedRow * 50) + 10; // Increased spacing from 40 to 50
                 const status = item.status || 'not-started';
                 const startDateStr = formatDateShort(item.startDate);
                 const endDateStr = formatDateShort(item.endDate);
+
+                // Determine if label should be inside or above the bar
+                // If bar is wide enough (>80px), put label inside
+                const labelInside = width > 80;
+                const labelClass = labelInside ? 'timeline-bar-label' : 'timeline-bar-label-above';
 
                 html += `
                     <div class="timeline-bar"
@@ -791,7 +812,7 @@ async function initApp() {
                          title="${escapeHtml(item.name)}\n${startDateStr} - ${endDateStr}">
                         <div class="timeline-bar-drag-handle-start"></div>
                         <div class="timeline-bar-shape ${status}"></div>
-                        <div class="timeline-bar-label">${escapeHtml(item.name)}</div>
+                        <div class="${labelClass}">${escapeHtml(item.name)}</div>
                         <div class="timeline-bar-start-date">${startDateStr}</div>
                         <div class="timeline-bar-end-date">${endDateStr}</div>
                         <div class="timeline-bar-drag-handle-end"></div>
@@ -800,9 +821,9 @@ async function initApp() {
             });
 
             const maxRow = Math.max(...activities.map(a => a.assignedRow || 0), -1) + 1;
-            const totalActivityHeight = maxRow * 40;
+            const totalActivityHeight = maxRow * 50; // Updated to match new spacing
             const milestoneHeight = milestones.length > 0 ? 65 : 0;
-            const minHeight = Math.max(milestoneHeight + totalActivityHeight + 20, 100);
+            const minHeight = Math.max(milestoneHeight + totalActivityHeight + 30, 100); // Increased padding
 
             html += `</div></div>`;
 
