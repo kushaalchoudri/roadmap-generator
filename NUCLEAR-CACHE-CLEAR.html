@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roadmap Generator - Fresh Load Test</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .card {
+            background: white;
+            color: #333;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 20px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        h1 { margin-top: 0; color: #667eea; }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+            font-weight: bold;
+        }
+        button:hover { background: #5568d3; transform: scale(1.05); }
+        .status {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        .big-button {
+            font-size: 20px;
+            padding: 20px 40px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="color: white; text-align: center;">🔥 NUCLEAR CACHE CLEAR 🔥</h1>
+
+    <div class="card">
+        <h2>⚠️ You're Seeing Cached Files!</h2>
+        <div class="status error">
+            The 404 error you see is from OLD cached HTML files that are trying to load firebase-config.js.
+            The NEW code (v2.2) doesn't try to load it anymore.
+        </div>
+        <div class="status info">
+            <strong>Current Time:</strong> <span id="currentTime"></span><br>
+            <strong>Latest Version:</strong> 2.2 (pushed just now)<br>
+            <strong>GitHub Pages Deploy:</strong> Takes 3-4 minutes
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>🔥 NUCLEAR OPTION: Clear Everything</h2>
+        <p><strong>Do ALL of these steps:</strong></p>
+
+        <h3>1️⃣ Close EVERYTHING</h3>
+        <ul>
+            <li>Close ALL browser tabs</li>
+            <li>Close ALL browser windows</li>
+            <li>Quit the browser completely</li>
+        </ul>
+
+        <h3>2️⃣ Clear Browser Data</h3>
+        <button onclick="showChromeInstructions()">Chrome Instructions</button>
+        <button onclick="showSafariInstructions()">Safari Instructions</button>
+        <button onclick="showFirefoxInstructions()">Firefox Instructions</button>
+        <div id="instructions"></div>
+
+        <h3>3️⃣ Wait for Deployment</h3>
+        <div class="status warning">
+            ⏰ GitHub Pages takes 3-4 minutes to deploy after a push.<br>
+            Last push was at: <strong><span id="pushTime"></span></strong><br>
+            Check back at: <strong><span id="readyTime"></span></strong>
+        </div>
+
+        <h3>4️⃣ Use Incognito Mode</h3>
+        <div class="status success">
+            Incognito/Private mode ALWAYS bypasses cache!
+        </div>
+        <button onclick="showIncognitoInstructions()">How to Open Incognito</button>
+        <div id="incognitoInstructions"></div>
+    </div>
+
+    <div class="card">
+        <h2>🚀 Open Fresh Instance</h2>
+        <p>After completing steps above, click one of these:</p>
+
+        <button class="big-button" onclick="openLocal()">
+            📂 Open Local Version
+        </button>
+        <br>
+        <button class="big-button" onclick="openLive()">
+            🌐 Open Live Version (Wait 4min!)
+        </button>
+        <br>
+        <button class="big-button" onclick="openIncognito()">
+            🕶️ Instructions for Incognito
+        </button>
+    </div>
+
+    <div class="card">
+        <h2>✅ How to Verify It's Fixed</h2>
+        <ol>
+            <li>Open the app (after steps above)</li>
+            <li>Press <code>F12</code> to open console</li>
+            <li>Go to <strong>Network</strong> tab</li>
+            <li>Refresh the page</li>
+            <li>Filter by "firebase"</li>
+        </ol>
+        <div class="status success">
+            ✅ <strong>CORRECT:</strong> NO firebase-config.js request at all<br>
+            ✅ Console shows: "Using localStorage for data storage"
+        </div>
+        <div class="status error">
+            ❌ <strong>WRONG (Still cached):</strong> firebase-config.js shows 404<br>
+            → You need to clear cache more aggressively!
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>🆘 Last Resort Options</h2>
+
+        <h3>Option 1: Different Browser</h3>
+        <p>If you're using Chrome, try Firefox or Safari. Fresh browser = no cache!</p>
+
+        <h3>Option 2: Direct File Open</h3>
+        <p>Open the local file directly from your file system:</p>
+        <code style="display: block; padding: 10px;">
+            file:///Users/i053963/projects/roadmap-generator/home.html
+        </code>
+        <button onclick="copyPath()">Copy Path</button>
+
+        <h3>Option 3: Wait Longer</h3>
+        <p>Sometimes GitHub Pages takes 5-10 minutes. Wait and try again.</p>
+    </div>
+
+    <script>
+        // Show current time
+        document.getElementById('currentTime').textContent = new Date().toLocaleTimeString();
+
+        // Calculate deployment ready time (4 minutes from now)
+        const now = new Date();
+        const pushTime = new Date(); // Assume push just happened
+        const readyTime = new Date(now.getTime() + 4 * 60 * 1000);
+
+        document.getElementById('pushTime').textContent = pushTime.toLocaleTimeString();
+        document.getElementById('readyTime').textContent = readyTime.toLocaleTimeString();
+
+        function showChromeInstructions() {
+            document.getElementById('instructions').innerHTML = `
+                <div class="status info" style="margin-top: 10px;">
+                    <strong>Chrome/Edge Instructions:</strong><br><br>
+                    1. Press <code>Ctrl+Shift+Delete</code> (Windows) or <code>Cmd+Shift+Delete</code> (Mac)<br>
+                    2. Time range: <strong>All time</strong><br>
+                    3. Check: <strong>Cached images and files</strong><br>
+                    4. Check: <strong>Cookies and site data</strong> (optional but recommended)<br>
+                    5. Click <strong>Clear data</strong><br>
+                    6. Close and restart Chrome
+                </div>
+            `;
+        }
+
+        function showSafariInstructions() {
+            document.getElementById('instructions').innerHTML = `
+                <div class="status info" style="margin-top: 10px;">
+                    <strong>Safari Instructions:</strong><br><br>
+                    1. Safari → Settings → Advanced<br>
+                    2. Enable "Show Develop menu"<br>
+                    3. Develop → Empty Caches (or <code>Cmd+Option+E</code>)<br>
+                    4. Close and restart Safari
+                </div>
+            `;
+        }
+
+        function showFirefoxInstructions() {
+            document.getElementById('instructions').innerHTML = `
+                <div class="status info" style="margin-top: 10px;">
+                    <strong>Firefox Instructions:</strong><br><br>
+                    1. Press <code>Ctrl+Shift+Delete</code> (Windows) or <code>Cmd+Shift+Delete</code> (Mac)<br>
+                    2. Time range: <strong>Everything</strong><br>
+                    3. Check: <strong>Cache</strong><br>
+                    4. Check: <strong>Cookies</strong> (optional but recommended)<br>
+                    5. Click <strong>Clear Now</strong><br>
+                    6. Close and restart Firefox
+                </div>
+            `;
+        }
+
+        function showIncognitoInstructions() {
+            document.getElementById('incognitoInstructions').innerHTML = `
+                <div class="status success" style="margin-top: 10px;">
+                    <strong>Incognito/Private Mode:</strong><br><br>
+                    <strong>Chrome/Edge:</strong> <code>Ctrl+Shift+N</code> (Windows) or <code>Cmd+Shift+N</code> (Mac)<br>
+                    <strong>Safari:</strong> <code>Cmd+Shift+N</code><br>
+                    <strong>Firefox:</strong> <code>Ctrl+Shift+P</code> (Windows) or <code>Cmd+Shift+P</code> (Mac)<br><br>
+                    Then navigate to:<br>
+                    <code>https://kushaalchoudri.github.io/roadmap-generator/home.html</code>
+                </div>
+            `;
+        }
+
+        function openLocal() {
+            window.location.href = 'home.html';
+        }
+
+        function openLive() {
+            const now = new Date();
+            const readyTime = new Date(now.getTime() + 4 * 60 * 1000);
+            alert(`⏰ WAIT! GitHub Pages needs time to deploy.\n\nCurrent time: ${now.toLocaleTimeString()}\nReady at: ${readyTime.toLocaleTimeString()}\n\nWait 4 minutes, then open the link in a NEW Incognito window!`);
+            window.open('https://kushaalchoudri.github.io/roadmap-generator/home.html', '_blank');
+        }
+
+        function openIncognito() {
+            alert(`To open in Incognito/Private mode:\n\n` +
+                  `Chrome/Edge (Windows): Ctrl+Shift+N\n` +
+                  `Chrome/Edge (Mac): Cmd+Shift+N\n` +
+                  `Safari (Mac): Cmd+Shift+N\n` +
+                  `Firefox (Windows): Ctrl+Shift+P\n` +
+                  `Firefox (Mac): Cmd+Shift+P\n\n` +
+                  `Then go to:\nhttps://kushaalchoudri.github.io/roadmap-generator/home.html`);
+        }
+
+        function copyPath() {
+            const path = 'file:///Users/i053963/projects/roadmap-generator/home.html';
+            navigator.clipboard.writeText(path).then(() => {
+                alert('Path copied! Paste it in your browser address bar.');
+            });
+        }
+    </script>
+</body>
+</html>
