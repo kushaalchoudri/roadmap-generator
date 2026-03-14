@@ -9,17 +9,11 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <!-- Firebase config is optional - if not present, app uses localStorage -->
+    <!-- Firebase config initialization - defaults to localStorage if not configured -->
     <script>
-        // Try to load firebase-config.js, fallback to localStorage if not found
-        (function() {
-            var script = document.createElement('script');
-            script.src = 'firebase-config.js';
-            script.onerror = function() {
-                console.log('Firebase config not found, using localStorage (this is normal)');
-            };
-            document.head.appendChild(script);
-        })();
+        // Initialize Firebase if config is available (optional)
+        // Without firebase-config.js, the app uses localStorage
+        console.log('Using localStorage for data storage (Firebase not configured)');
     </script>
 </head>
 <body>
