@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Version Check - Roadmap Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .check-box {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin: 20px 0;
+        }
+        h1 { color: #667eea; }
+        .status {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover { background: #5568d3; }
+        .code {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            margin: 10px 0;
+            white-space: pre-wrap;
+        }
+        .instruction {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Version Check - Roadmap Generator</h1>
+
+    <div class="check-box">
+        <h2>Step 1: Clear Your Browser Cache</h2>
+        <div class="instruction">
+            <strong>CRITICAL: You must do this first!</strong><br><br>
+            <strong>Windows/Linux:</strong> Press Ctrl + Shift + R<br>
+            <strong>Mac:</strong> Press Cmd + Shift + R<br><br>
+            Or open the app in Incognito/Private mode
+        </div>
+        <button onclick="openIncognito()">Instructions for Incognito Mode</button>
+    </div>
+
+    <div class="check-box">
+        <h2>Step 2: Run Version Check</h2>
+        <button onclick="runCheck()">🔍 Check Version</button>
+        <button onclick="clearResults()">Clear Results</button>
+        <div id="results"></div>
+    </div>
+
+    <div class="check-box">
+        <h2>Step 3: What You Should See</h2>
+        <div class="status success">
+            ✅ Script version: 2.0<br>
+            ✅ NO "viewMonthBtn already declared" errors<br>
+            ✅ Firebase message: "using localStorage (this is normal)"
+        </div>
+        <div class="status error">
+            ❌ If you see "viewMonthBtn already declared" → Cache not cleared<br>
+            ❌ If version is not 2.0 → Using old cached file
+        </div>
+    </div>
+
+    <div class="check-box">
+        <h2>Open the Application</h2>
+        <button onclick="openApp()">Open Roadmap Generator</button>
+        <button onclick="openAppIncognito()">Open in New Window (Incognito Recommended)</button>
+    </div>
+
+    <script>
+        function addResult(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.innerHTML = message;
+            results.appendChild(div);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        function runCheck() {
+            clearResults();
+            addResult('Running checks...', 'warning');
+
+            // Check 1: Try to load script.js and check version
+            fetch('script.js?v=2.0')
+                .then(response => {
+                    if (response.ok) {
+                        addResult('✅ SUCCESS: script.js?v=2.0 loaded successfully', 'success');
+                        return response.text();
+                    } else {
+                        throw new Error('Failed to load script');
+                    }
+                })
+                .then(scriptContent => {
+                    // Check for duplicate declarations
+                    const viewMonthBtnMatches = scriptContent.match(/const viewMonthBtn/g);
+                    if (viewMonthBtnMatches && viewMonthBtnMatches.length > 1) {
+                        addResult(`❌ ERROR: Found ${viewMonthBtnMatches.length} declarations of viewMonthBtn (should be 1)`, 'error');
+                        addResult('🔥 YOU NEED TO CLEAR YOUR CACHE! See instructions above.', 'error');
+                    } else if (viewMonthBtnMatches && viewMonthBtnMatches.length === 1) {
+                        addResult('✅ SUCCESS: Only 1 declaration of viewMonthBtn found (correct!)', 'success');
+                    }
+
+                    // Check script size
+                    const sizeKB = (scriptContent.length / 1024).toFixed(2);
+                    addResult(`📊 Script size: ${sizeKB} KB (should be ~42-44 KB)`,
+                        sizeKB > 40 && sizeKB < 50 ? 'success' : 'warning');
+
+                    // Check for debug logs
+                    if (scriptContent.includes('console.log(\'View buttons:\'')) {
+                        addResult('✅ Debug logging present', 'success');
+                    } else {
+                        addResult('⚠️ Debug logging not found', 'warning');
+                    }
+
+                    // Overall result
+                    if (viewMonthBtnMatches && viewMonthBtnMatches.length === 1 && sizeKB > 40) {
+                        addResult('🎉 SUCCESS! You have the latest version!', 'success');
+                        addResult('You can now open the application and test the features.', 'success');
+                    } else {
+                        addResult('⚠️ Please clear your browser cache and try again', 'warning');
+                    }
+                })
+                .catch(error => {
+                    addResult(`❌ ERROR: ${error.message}`, 'error');
+                    addResult('Make sure you are running this from the project directory', 'warning');
+                });
+
+            // Check browser info
+            addResult(`🌐 Browser: ${navigator.userAgent.split(' ').pop()}`, 'info');
+        }
+
+        function openIncognito() {
+            alert(`To open in Incognito/Private mode:
+
+Chrome/Edge:
+- Windows: Press Ctrl + Shift + N
+- Mac: Press Cmd + Shift + N
+
+Safari:
+- Press Cmd + Shift + N
+
+Firefox:
+- Windows: Press Ctrl + Shift + P
+- Mac: Press Cmd + Shift + P
+
+Then navigate to:
+file:///Users/i053963/projects/roadmap-generator/home.html
+
+Or:
+https://kushaalchoudri.github.io/roadmap-generator/home.html`);
+        }
+
+        function openApp() {
+            window.location.href = 'home.html';
+        }
+
+        function openAppIncognito() {
+            window.open('home.html', '_blank');
+            alert('NOTE: The new window is NOT incognito mode.\n\nFor true incognito, manually open incognito and navigate to:\n\nfile:///Users/i053963/projects/roadmap-generator/home.html\n\nOR\n\nhttps://kushaalchoudri.github.io/roadmap-generator/home.html');
+        }
+    </script>
+</body>
+</html>
