@@ -699,8 +699,8 @@ async function initApp() {
             const todayLeft = todayDays * pixelsPerDay;
             console.log('Adding today marker at:', todayLeft, 'px');
             gridLinesHtml += `<div class="today-marker" style="left: ${todayLeft}px;"></div>`;
-            // Create label separately to add only once
-            todayLabelHtml = `<div class="today-marker-label" style="left: ${todayLeft}px;">TODAY</div>`;
+            // Create label separately - add 200px offset for workstream header
+            todayLabelHtml = `<div class="today-marker-label" style="left: ${200 + todayLeft}px;">TODAY</div>`;
         } else {
             console.log('Today is outside timeline range');
         }
@@ -708,8 +708,12 @@ async function initApp() {
         // Add global gridlines container that spans entire timeline height
         html += `<div class="timeline-gridlines-container" style="position: absolute; top: 0; left: 200px; right: 0; bottom: 0; pointer-events: none; z-index: 1;">`;
         html += gridLinesHtml;
-        html += todayLabelHtml;
         html += `</div>`;
+
+        // Add TODAY label outside gridlines container for better visibility
+        if (todayLabelHtml) {
+            html += todayLabelHtml;
+        }
 
         // General milestones
         let isFirstWorkstream = true;

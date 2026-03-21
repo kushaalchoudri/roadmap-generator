@@ -590,7 +590,7 @@ textarea {
     border: 2px solid #3b82f6;
     border-radius: 8px;
     background: #f8fafc;
-    overflow: hidden; /* Ensure children don't overflow rounded corners */
+    overflow: visible; /* Allow TODAY label and content to show outside */
     padding: 5px 0; /* Small padding inside border */
 }
 
@@ -664,7 +664,7 @@ textarea {
     flex: 1;
     position: relative;
     min-height: 100px;
-    padding-top: 30px; /* Increased to accommodate TODAY label */
+    padding-top: 35px; /* Space for TODAY label at top */
     overflow: visible;
 }
 
@@ -860,7 +860,7 @@ textarea {
 
 .today-marker-label {
     position: absolute;
-    top: -30px; /* Adjusted to be more visible */
+    top: 5px; /* Position near the top of timeline-grid */
     left: 50%;
     transform: translateX(-50%);
     background: #ef4444;
