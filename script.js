@@ -847,15 +847,19 @@ async function initApp() {
             const maxRow = Math.max(...activities.map(a => a.assignedRow || 0), -1) + 1;
             const totalActivityHeight = maxRow * 50; // Updated to match new spacing
             const milestoneHeight = milestones.length > 0 ? 65 : 0;
-            const minHeight = Math.max(milestoneHeight + totalActivityHeight + 30, 100); // Increased padding
+            const barHeight = 24; // Height of activity bar
+            const labelAboveHeight = 20; // Height of label when positioned above bar
+            const minHeight = Math.max(milestoneHeight + totalActivityHeight + barHeight + labelAboveHeight + 20, 100); // Increased padding
 
             html += `</div></div>`;
 
-            const lastIndex = html.lastIndexOf('<div class="workstream-rows">');
+            // Replace the workstream-rows div to add calculated min-height
+            const searchStr = '<div class="workstream-rows" style="position: relative;">';
+            const lastIndex = html.lastIndexOf(searchStr);
             if (lastIndex !== -1) {
                 html = html.substring(0, lastIndex) +
-                       `<div class="workstream-rows" style="min-height: ${minHeight}px;">` +
-                       html.substring(lastIndex + '<div class="workstream-rows">'.length);
+                       `<div class="workstream-rows" style="position: relative; min-height: ${minHeight}px;">` +
+                       html.substring(lastIndex + searchStr.length);
             }
         });
 
