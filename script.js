@@ -180,6 +180,7 @@ async function initApp() {
     const timelineCanvas = document.getElementById('timeline');
 
     // View toggle buttons
+    const viewWeekBtn = document.getElementById('viewWeekBtn');
     const viewMonthBtn = document.getElementById('viewMonthBtn');
     const viewQuarterBtn = document.getElementById('viewQuarterBtn');
     const viewYearBtn = document.getElementById('viewYearBtn');
@@ -235,7 +236,18 @@ async function initApp() {
     });
 
     // View toggle buttons with null checks
-    console.log('View buttons:', viewMonthBtn, viewQuarterBtn, viewYearBtn);
+    console.log('View buttons:', viewWeekBtn, viewMonthBtn, viewQuarterBtn, viewYearBtn);
+
+    if (viewWeekBtn) {
+        viewWeekBtn.addEventListener('click', () => {
+            console.log('Week button clicked');
+            currentView = 'week';
+            document.querySelectorAll('.btn-view-toggle').forEach(btn => btn.classList.remove('active'));
+            viewWeekBtn.classList.add('active');
+            renderTimeline();
+        });
+    }
+
     if (viewMonthBtn) {
         viewMonthBtn.addEventListener('click', () => {
             console.log('Month button clicked');
@@ -503,7 +515,17 @@ async function initApp() {
         const maxDate = new Date(Math.max(...allDates));
 
         // Add padding based on view
-        if (currentView === 'year') {
+        if (currentView === 'week') {
+            // Week view - find Monday of the week containing minDate
+            const minDay = minDate.getDay();
+            const daysToMonday = minDay === 0 ? 6 : minDay - 1; // Sunday is 0, we want Monday
+            minDate.setDate(minDate.getDate() - daysToMonday);
+
+            // Find Sunday of the week containing maxDate
+            const maxDay = maxDate.getDay();
+            const daysToSunday = maxDay === 0 ? 0 : 7 - maxDay;
+            maxDate.setDate(maxDate.getDate() + daysToSunday);
+        } else if (currentView === 'year') {
             minDate.setMonth(0, 1);
             maxDate.setMonth(11, 31);
         } else if (currentView === 'quarter') {
@@ -518,7 +540,27 @@ async function initApp() {
 
         // Generate time periods based on view
         const periods = [];
-        if (currentView === 'year') {
+        if (currentView === 'week') {
+            // Week view - each period is one week (Monday to Sunday)
+            let currentWeekStart = new Date(minDate);
+            while (currentWeekStart <= maxDate) {
+                const weekEnd = new Date(currentWeekStart);
+                weekEnd.setDate(weekEnd.getDate() + 6); // Sunday
+
+                const weekNum = getWeekNumber(currentWeekStart);
+                const monthYear = currentWeekStart.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+
+                periods.push({
+                    label: `W${weekNum} ${monthYear}`,
+                    start: new Date(currentWeekStart),
+                    end: weekEnd > maxDate ? maxDate : weekEnd,
+                    days: 7,
+                    weekNumber: weekNum
+                });
+
+                currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+            }
+        } else if (currentView === 'year') {
             // Year view
             const currentYear = minDate.getFullYear();
             const endYear = maxDate.getFullYear();
@@ -623,7 +665,8 @@ async function initApp() {
 
         // Calculate dimensions
         const totalDays = Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24)) + 1;
-        const pixelsPerDay = currentView === 'year' ? Math.max(1, 1200 / totalDays) :
+        const pixelsPerDay = currentView === 'week' ? Math.max(15, 1200 / totalDays) :  // 15+ pixels per day for week view
+                            currentView === 'year' ? Math.max(1, 1200 / totalDays) :
                             currentView === 'quarter' ? Math.max(2, 1200 / totalDays) :
                             Math.max(3, 1200 / totalDays);
         const timelineWidth = totalDays * pixelsPerDay;
@@ -651,11 +694,21 @@ async function initApp() {
             html += `<div class="timeline-month" style="width: ${width}px; min-width: ${width}px;">`;
             html += `<div class="timeline-month-header">${period.label}</div>`;
 
-            // Only show weeks in month view
+            // Show weeks in month view
             if (currentView === 'month' && period.weeks) {
                 html += `<div class="timeline-weeks">`;
                 period.weeks.forEach(week => {
                     html += `<div class="timeline-week">W${week.number}</div>`;
+                });
+                html += `</div>`;
+            }
+
+            // Show days in week view
+            if (currentView === 'week' && period.days === 7) {
+                html += `<div class="timeline-weeks" style="display: flex;">`;
+                const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                dayNames.forEach(dayName => {
+                    html += `<div class="timeline-week" style="flex: 1; font-size: 10px;">${dayName}</div>`;
                 });
                 html += `</div>`;
             }
@@ -680,7 +733,13 @@ async function initApp() {
         let gridLinesHtml = '';
 
         // Add week/month lines based on view
-        if (currentView === 'month') {
+        if (currentView === 'week') {
+            // Week view - show daily gridlines
+            for (let day = 0; day <= totalDays; day++) {
+                const dayLeft = day * pixelsPerDay;
+                gridLinesHtml += `<div class="week-line" style="left: ${dayLeft}px; opacity: 0.3;"></div>`;
+            }
+        } else if (currentView === 'month') {
             periods.forEach(period => {
                 if (period.weeks) {
                     period.weeks.forEach(week => {
