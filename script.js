@@ -391,6 +391,7 @@ async function initApp() {
                     </td>
                     <td>
                         <div class="table-actions">
+                            <button class="btn-table-action btn-table-duplicate" onclick="duplicateRow('${item.id}')">Duplicate</button>
                             <button class="btn-table-action btn-table-delete" onclick="deleteRow('${item.id}')">Delete</button>
                         </div>
                     </td>
@@ -1069,6 +1070,168 @@ async function initApp() {
 }
 
 // Global function for deleting rows
+// Duplicate a row to a new or existing workstream
+async function duplicateRow(id) {
+    const item = roadmapItems.find(i => i.id == id);
+    if (!item) return;
+
+    // Get all existing workstreams
+    const workstreams = [...new Set(roadmapItems.map(i => i.workstream).filter(w => w && w.trim()))];
+
+    // Create dialog HTML
+    const dialogHtml = `
+        <div id="duplicateDialog" style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        ">
+            <div style="
+                background: white;
+                padding: 30px;
+                border-radius: 12px;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+                max-width: 500px;
+                width: 90%;
+            ">
+                <h2 style="margin-top: 0; color: #1f2937;">Duplicate Item</h2>
+                <p style="color: #6b7280; margin-bottom: 20px;">
+                    Duplicating: <strong>${escapeHtml(item.name || 'Untitled')}</strong>
+                </p>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">
+                        Target Workstream:
+                    </label>
+                    <select id="duplicateWorkstreamSelect" style="
+                        width: 100%;
+                        padding: 10px;
+                        border: 2px solid #d1d5db;
+                        border-radius: 6px;
+                        font-size: 14px;
+                    ">
+                        <option value="__same__">Same workstream (${escapeHtml(item.workstream || 'None')})</option>
+                        <option value="__new__">Create new workstream...</option>
+                        ${workstreams.filter(w => w !== item.workstream).map(w =>
+                            `<option value="${escapeHtml(w)}">${escapeHtml(w)}</option>`
+                        ).join('')}
+                    </select>
+                </div>
+
+                <div id="newWorkstreamInput" style="display: none; margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">
+                        New Workstream Name:
+                    </label>
+                    <input type="text" id="newWorkstreamName" style="
+                        width: 100%;
+                        padding: 10px;
+                        border: 2px solid #d1d5db;
+                        border-radius: 6px;
+                        font-size: 14px;
+                    " placeholder="Enter workstream name">
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 25px;">
+                    <button id="duplicateCancelBtn" style="
+                        padding: 10px 20px;
+                        border: 2px solid #d1d5db;
+                        background: white;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-weight: 600;
+                        color: #374151;
+                    ">Cancel</button>
+                    <button id="duplicateConfirmBtn" style="
+                        padding: 10px 20px;
+                        border: none;
+                        background: #3b82f6;
+                        color: white;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-weight: 600;
+                    ">Duplicate</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Add dialog to body
+    document.body.insertAdjacentHTML('beforeend', dialogHtml);
+
+    const dialog = document.getElementById('duplicateDialog');
+    const select = document.getElementById('duplicateWorkstreamSelect');
+    const newInput = document.getElementById('newWorkstreamInput');
+    const newNameInput = document.getElementById('newWorkstreamName');
+    const cancelBtn = document.getElementById('duplicateCancelBtn');
+    const confirmBtn = document.getElementById('duplicateConfirmBtn');
+
+    // Show/hide new workstream input
+    select.addEventListener('change', () => {
+        if (select.value === '__new__') {
+            newInput.style.display = 'block';
+            newNameInput.focus();
+        } else {
+            newInput.style.display = 'none';
+        }
+    });
+
+    // Cancel button
+    cancelBtn.addEventListener('click', () => {
+        dialog.remove();
+    });
+
+    // Confirm button
+    confirmBtn.addEventListener('click', async () => {
+        let targetWorkstream = select.value;
+
+        if (targetWorkstream === '__new__') {
+            targetWorkstream = newNameInput.value.trim();
+            if (!targetWorkstream) {
+                alert('Please enter a workstream name');
+                return;
+            }
+        } else if (targetWorkstream === '__same__') {
+            targetWorkstream = item.workstream;
+        }
+
+        // Create duplicate item
+        const duplicateItem = {
+            ...item,
+            id: Date.now() + Math.random(), // Ensure unique ID
+            workstream: targetWorkstream
+        };
+
+        roadmapItems.push(duplicateItem);
+        await saveData();
+
+        // Close dialog
+        dialog.remove();
+
+        // Refresh UI
+        renderTable();
+        renderTimeline();
+
+        // Show save button
+        const saveRoadmapBtn = document.getElementById('saveRoadmapBtn');
+        if (saveRoadmapBtn) {
+            saveRoadmapBtn.style.display = 'block';
+        }
+    });
+
+    // Close on background click
+    dialog.addEventListener('click', (e) => {
+        if (e.target === dialog) {
+            dialog.remove();
+        }
+    });
+}
+
 async function deleteRow(id) {
     if (confirm('Are you sure you want to delete this item?')) {
         roadmapItems = roadmapItems.filter(item => item.id != id);

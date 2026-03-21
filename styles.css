@@ -249,6 +249,17 @@ textarea {
     transition: all 0.2s;
 }
 
+.btn-table-duplicate {
+    background: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+    margin-right: 5px;
+}
+
+.btn-table-duplicate:hover {
+    background: #bfdbfe;
+}
+
 .btn-table-delete {
     background: #fee;
     color: #c00;
