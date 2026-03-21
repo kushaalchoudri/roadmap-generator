@@ -636,7 +636,9 @@ async function initApp() {
         });
 
         // Render timeline HTML - adjust width to fit content with proper padding
-        let html = '<div class="timeline-content" style="width: ' + Math.max(timelineWidth + 250, 1200) + 'px;">';
+        // Add extra padding (400px) to accommodate labels, dates, and descriptions that extend beyond bars
+        const contentWidth = Math.max(timelineWidth + 400, 1200);
+        let html = '<div class="timeline-content" style="width: ' + contentWidth + 'px;">';
 
         // Period headers
         html += '<div class="timeline-header-row">';
@@ -660,10 +662,18 @@ async function initApp() {
             html += `</div>`;
         });
 
+        // Add padding div to extend the month headers to match content width
+        const extraPadding = contentWidth - 200 - timelineWidth; // Content width - left spacer - timeline width
+        if (extraPadding > 0) {
+            html += `<div class="timeline-month" style="width: ${extraPadding}px; min-width: ${extraPadding}px; border-left: 1px solid #d1d5db;">
+                <div class="timeline-month-header" style="opacity: 0.5;">...</div>
+            </div>`;
+        }
+
         html += '</div></div></div>';
 
         // General milestones section and workstreams
-        html += '<div class="timeline-grid" style="position: relative;">';
+        html += `<div class="timeline-grid" style="position: relative; min-width: ${contentWidth - 200}px;">`;
 
         // Add vertical lines and today marker - GLOBAL container spanning entire timeline
         let gridLinesHtml = '';
@@ -720,7 +730,7 @@ async function initApp() {
         if (generalMilestones.length > 0) {
             html += `<div class="timeline-workstream">`;
             html += `<div class="workstream-header milestones">Milestones</div>`;
-            html += `<div class="workstream-rows" style="min-height: 65px; position: relative;">`;
+            html += `<div class="workstream-rows" style="min-height: 65px; position: relative; min-width: ${contentWidth - 200}px;">`;
             // Gridlines are now in global container, not here
 
             generalMilestones.forEach(item => {
@@ -748,7 +758,7 @@ async function initApp() {
 
             html += `<div class="timeline-workstream">`;
             html += `<div class="workstream-header">${escapeHtml(workstreamName)}</div>`;
-            html += `<div class="workstream-rows" style="position: relative;">`;
+            html += `<div class="workstream-rows" style="position: relative; min-width: ${contentWidth - 200}px;">`;
             // Gridlines are now in global container, not here
 
             // Render milestones
@@ -854,11 +864,11 @@ async function initApp() {
             html += `</div></div>`;
 
             // Replace the workstream-rows div to add calculated min-height
-            const searchStr = '<div class="workstream-rows" style="position: relative;">';
+            const searchStr = `<div class="workstream-rows" style="position: relative; min-width: ${contentWidth - 200}px;">`;
             const lastIndex = html.lastIndexOf(searchStr);
             if (lastIndex !== -1) {
                 html = html.substring(0, lastIndex) +
-                       `<div class="workstream-rows" style="position: relative; min-height: ${minHeight}px;">` +
+                       `<div class="workstream-rows" style="position: relative; min-width: ${contentWidth - 200}px; min-height: ${minHeight}px;">` +
                        html.substring(lastIndex + searchStr.length);
             }
         });
