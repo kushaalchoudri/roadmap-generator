@@ -51,25 +51,19 @@ async function saveAllRoadmaps(roadmaps) {
 // Load current roadmap data
 async function loadCurrentRoadmap() {
     const roadmaps = await loadAllRoadmaps();
-    console.log('All roadmaps loaded:', roadmaps);
-    console.log('Current roadmap ID:', currentRoadmapId);
     const roadmap = roadmaps[currentRoadmapId];
 
     if (roadmap) {
         roadmapItems = roadmap.items || [];
-        console.log('Loaded roadmap items:', roadmapItems.length, 'items');
         return roadmap;
     }
 
-    console.log('No roadmap found for ID:', currentRoadmapId);
     return null;
 }
 
 // Save current roadmap
 async function saveCurrentRoadmap() {
     if (!currentRoadmapId) return;
-
-    console.log('Saving roadmap, items count:', roadmapItems.length);
 
     if (useFirebase) {
         try {
@@ -98,7 +92,6 @@ async function saveCurrentRoadmap() {
             roadmaps[currentRoadmapId].items = roadmapItems;
             roadmaps[currentRoadmapId].lastModified = Date.now();
             await saveAllRoadmaps(roadmaps);
-            console.log('Saved to localStorage, roadmap ID:', currentRoadmapId, 'items:', roadmapItems.length);
         }
     }
 }
@@ -234,37 +227,27 @@ async function initApp() {
         }
     });
 
-    // View toggle buttons with null checks
-    console.log('View buttons:', viewMonthBtn, viewQuarterBtn, viewYearBtn);
-    if (viewMonthBtn) {
-        viewMonthBtn.addEventListener('click', () => {
-            console.log('Month button clicked');
-            currentView = 'month';
-            document.querySelectorAll('.btn-view-toggle').forEach(btn => btn.classList.remove('active'));
-            viewMonthBtn.classList.add('active');
-            renderTimeline();
-        });
-    }
+    // View toggle buttons
+    viewMonthBtn.addEventListener('click', () => {
+        currentView = 'month';
+        document.querySelectorAll('.btn-view-toggle').forEach(btn => btn.classList.remove('active'));
+        viewMonthBtn.classList.add('active');
+        renderTimeline();
+    });
 
-    if (viewQuarterBtn) {
-        viewQuarterBtn.addEventListener('click', () => {
-            console.log('Quarter button clicked');
-            currentView = 'quarter';
-            document.querySelectorAll('.btn-view-toggle').forEach(btn => btn.classList.remove('active'));
-            viewQuarterBtn.classList.add('active');
-            renderTimeline();
-        });
-    }
+    viewQuarterBtn.addEventListener('click', () => {
+        currentView = 'quarter';
+        document.querySelectorAll('.btn-view-toggle').forEach(btn => btn.classList.remove('active'));
+        viewQuarterBtn.classList.add('active');
+        renderTimeline();
+    });
 
-    if (viewYearBtn) {
-        viewYearBtn.addEventListener('click', () => {
-            console.log('Year button clicked');
-            currentView = 'year';
-            document.querySelectorAll('.btn-view-toggle').forEach(btn => btn.classList.remove('active'));
-            viewYearBtn.classList.add('active');
-            renderTimeline();
-        });
-    }
+    viewYearBtn.addEventListener('click', () => {
+        currentView = 'year';
+        document.querySelectorAll('.btn-view-toggle').forEach(btn => btn.classList.remove('active'));
+        viewYearBtn.classList.add('active');
+        renderTimeline();
+    });
 
     // Download timeline as image
     downloadBtn.addEventListener('click', async () => {
@@ -309,7 +292,6 @@ async function initApp() {
 
     // Render table
     function renderTable() {
-        console.log('renderTable called, roadmapItems count:', roadmapItems.length);
         if (roadmapItems.length === 0) {
             tableBody.innerHTML = '';
             emptyState.classList.add('show');
@@ -461,10 +443,8 @@ async function initApp() {
     renderTable();
     renderTimeline();
 
-    // Enhanced renderTimeline function with drag-and-drop, view modes, today marker, and smart positioning
+    // Render timeline (keeping your existing timeline rendering logic)
     function renderTimeline() {
-        console.log('renderTimeline called with view:', currentView);
-
         if (roadmapItems.length === 0) {
             timelineCanvas.innerHTML = `
                 <div class="empty-state">
@@ -501,96 +481,41 @@ async function initApp() {
         const minDate = new Date(Math.min(...allDates));
         const maxDate = new Date(Math.max(...allDates));
 
-        // Add padding based on view
-        if (currentView === 'year') {
-            minDate.setMonth(0, 1);
-            maxDate.setMonth(11, 31);
-        } else if (currentView === 'quarter') {
-            const startQuarter = Math.floor(minDate.getMonth() / 3) * 3;
-            minDate.setMonth(startQuarter, 1);
-            const endQuarter = Math.floor(maxDate.getMonth() / 3) * 3 + 2;
-            maxDate.setMonth(endQuarter + 1, 0);
-        } else { // month view
-            minDate.setDate(1);
-            maxDate.setMonth(maxDate.getMonth() + 1, 0);
-        }
+        // Add padding
+        minDate.setDate(1);
+        maxDate.setMonth(maxDate.getMonth() + 1);
+        maxDate.setDate(0);
 
-        // Generate time periods based on view
-        const periods = [];
-        if (currentView === 'year') {
-            // Year view
-            const currentYear = minDate.getFullYear();
-            const endYear = maxDate.getFullYear();
-            for (let year = currentYear; year <= endYear; year++) {
-                const yearStart = new Date(year, 0, 1);
-                const yearEnd = new Date(year, 11, 31);
-                const daysInYear = Math.ceil((yearEnd - yearStart) / (1000 * 60 * 60 * 24)) + 1;
-                periods.push({
-                    label: year.toString(),
-                    start: yearStart,
-                    end: yearEnd,
-                    days: daysInYear
-                });
-            }
-        } else if (currentView === 'quarter') {
-            // Quarter view
-            let currentDate = new Date(minDate);
-            while (currentDate <= maxDate) {
-                const quarter = Math.floor(currentDate.getMonth() / 3) + 1;
-                const quarterStart = new Date(currentDate.getFullYear(), (quarter - 1) * 3, 1);
-                const quarterEnd = new Date(currentDate.getFullYear(), quarter * 3, 0);
-                const daysInQuarter = Math.ceil((quarterEnd - quarterStart) / (1000 * 60 * 60 * 24)) + 1;
+        // Generate months with weeks
+        const months = [];
+        const currentMonth = new Date(minDate);
+        while (currentMonth <= maxDate) {
+            const monthStart = new Date(currentMonth);
+            const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0);
 
-                periods.push({
-                    label: `Q${quarter} ${currentDate.getFullYear()}`,
-                    start: quarterStart,
-                    end: quarterEnd,
-                    days: daysInQuarter
+            const weeks = [];
+            let weekStart = new Date(monthStart);
+
+            while (weekStart <= monthEnd) {
+                const weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekEnd.getDate() + 6);
+
+                const weekNum = getWeekNumber(weekStart);
+                weeks.push({
+                    number: weekNum,
+                    start: new Date(weekStart),
+                    end: weekEnd > monthEnd ? monthEnd : weekEnd
                 });
 
-                currentDate = new Date(quarterEnd);
-                currentDate.setDate(currentDate.getDate() + 1);
+                weekStart.setDate(weekStart.getDate() + 7);
             }
-        } else {
-            // Month view (existing logic)
-            let currentMonth = new Date(minDate);
-            while (currentMonth <= maxDate) {
-                const monthStart = new Date(currentMonth);
-                const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0);
-                const daysInMonth = monthEnd.getDate();
 
-                const weeks = [];
-                let weekStart = new Date(monthStart);
-                while (weekStart <= monthEnd) {
-                    // Find Monday of the current week (skip to Monday if not already)
-                    const dayOfWeek = weekStart.getDay();
-                    const daysToMonday = dayOfWeek === 0 ? 1 : (dayOfWeek === 1 ? 0 : (8 - dayOfWeek));
-                    if (daysToMonday > 0) {
-                        weekStart.setDate(weekStart.getDate() + daysToMonday);
-                    }
-
-                    if (weekStart > monthEnd) break;
-
-                    const weekEnd = new Date(weekStart);
-                    weekEnd.setDate(weekEnd.getDate() + 6);
-                    const weekNum = getWeekNumber(weekStart);
-                    weeks.push({
-                        number: weekNum,
-                        start: new Date(weekStart),
-                        end: weekEnd > monthEnd ? monthEnd : weekEnd
-                    });
-                    weekStart.setDate(weekStart.getDate() + 7);
-                }
-
-                periods.push({
-                    label: currentMonth.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-                    start: monthStart,
-                    end: monthEnd,
-                    days: daysInMonth,
-                    weeks: weeks
-                });
-                currentMonth.setMonth(currentMonth.getMonth() + 1);
-            }
+            months.push({
+                date: new Date(currentMonth),
+                label: currentMonth.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+                weeks: weeks
+            });
+            currentMonth.setMonth(currentMonth.getMonth() + 1);
         }
 
         // Group items
@@ -601,6 +526,7 @@ async function initApp() {
             if (item.type === 'milestone') {
                 const milestoneDate = item.date || item.startDate;
                 if (!milestoneDate) return;
+
                 const milestoneItem = { ...item, date: milestoneDate };
 
                 if (item.workstream && item.workstream.trim()) {
@@ -613,6 +539,7 @@ async function initApp() {
                 }
             } else if (item.type === 'activity' && item.startDate && item.endDate) {
                 if (!item.workstream) return;
+
                 if (!workstreams[item.workstream]) {
                     workstreams[item.workstream] = [];
                 }
@@ -621,102 +548,56 @@ async function initApp() {
         });
 
         // Calculate dimensions
-        const totalDays = Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24)) + 1;
-        const pixelsPerDay = currentView === 'year' ? Math.max(1, 1200 / totalDays) :
-                            currentView === 'quarter' ? Math.max(2, 1200 / totalDays) :
-                            Math.max(3, 1200 / totalDays);
+        const totalDays = Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24));
+        const pixelsPerDay = Math.max(3, 1200 / totalDays);
         const timelineWidth = totalDays * pixelsPerDay;
 
-        console.log('Timeline calculation:', {
-            totalDays,
-            pixelsPerDay,
-            timelineWidth,
-            minDate: minDate.toISOString(),
-            maxDate: maxDate.toISOString()
-        });
+        // Render timeline HTML
+        let html = '<div class="timeline-content" style="width: ' + Math.max(timelineWidth + 200, 1400) + 'px;">';
 
-        // Render timeline HTML - adjust width to fit content with proper padding
-        let html = '<div class="timeline-content" style="width: ' + Math.max(timelineWidth + 250, 1200) + 'px;">';
-
-        // Period headers
+        // Month headers
         html += '<div class="timeline-header-row">';
         html += '<div class="timeline-left-spacer"></div>';
         html += '<div class="timeline-months-wrapper"><div class="timeline-months">';
 
-        periods.forEach(period => {
-            const width = period.days * pixelsPerDay;
+        months.forEach(month => {
+            const monthStart = new Date(month.date);
+            const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0);
+            const daysInMonth = monthEnd.getDate();
+            const width = daysInMonth * pixelsPerDay;
+
             html += `<div class="timeline-month" style="width: ${width}px; min-width: ${width}px;">`;
-            html += `<div class="timeline-month-header">${period.label}</div>`;
-
-            // Only show weeks in month view
-            if (currentView === 'month' && period.weeks) {
-                html += `<div class="timeline-weeks">`;
-                period.weeks.forEach(week => {
-                    html += `<div class="timeline-week">W${week.number}</div>`;
-                });
-                html += `</div>`;
-            }
-
-            html += `</div>`;
+            html += `<div class="timeline-month-header">${month.label}</div>`;
+            html += `<div class="timeline-weeks">`;
+            month.weeks.forEach(week => {
+                html += `<div class="timeline-week">W${week.number}</div>`;
+            });
+            html += `</div></div>`;
         });
 
         html += '</div></div></div>';
 
-        // General milestones section and workstreams
+        // General milestones section
         html += '<div class="timeline-grid" style="position: relative;">';
 
-        // Add vertical lines and today marker
-        let gridLinesHtml = '';
-
-        // Add week/month lines based on view
-        if (currentView === 'month') {
-            periods.forEach(period => {
-                if (period.weeks) {
-                    period.weeks.forEach(week => {
-                        const weekStartDay = Math.ceil((week.start - minDate) / (1000 * 60 * 60 * 24));
-                        const weekLeft = weekStartDay * pixelsPerDay;
-                        gridLinesHtml += `<div class="week-line" style="left: ${weekLeft}px;"></div>`;
-                    });
-                }
+        // Add vertical week lines across entire grid
+        let weekLineHtml = '';
+        let currentDay = 0;
+        months.forEach(month => {
+            month.weeks.forEach(week => {
+                const weekStartDay = Math.ceil((week.start - minDate) / (1000 * 60 * 60 * 24));
+                const weekLeft = weekStartDay * pixelsPerDay;
+                weekLineHtml += `<div class="week-line" style="left: ${weekLeft}px;"></div>`;
             });
-        } else {
-            // For quarter and year view, show month lines
-            periods.forEach(period => {
-                const periodStartDay = Math.ceil((period.start - minDate) / (1000 * 60 * 60 * 24));
-                const periodLeft = periodStartDay * pixelsPerDay;
-                gridLinesHtml += `<div class="week-line" style="left: ${periodLeft}px;"></div>`;
-            });
-        }
+        });
 
-        // Add TODAY marker
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        console.log('Today date:', today, 'Min:', minDate, 'Max:', maxDate);
-        let todayMarkerHtml = '';
-        let todayLabelHtml = '';
-        if (today >= minDate && today <= maxDate) {
-            const todayDays = Math.ceil((today - minDate) / (1000 * 60 * 60 * 24));
-            const todayLeft = todayDays * pixelsPerDay;
-            console.log('Adding today marker at:', todayLeft, 'px');
-            gridLinesHtml += `<div class="today-marker" style="left: ${todayLeft}px;"></div>`;
-            // Create label separately to add only once
-            todayLabelHtml = `<div class="today-marker-label" style="left: ${todayLeft}px;">TODAY</div>`;
-        } else {
-            console.log('Today is outside timeline range');
-        }
-
-        // General milestones
-        let isFirstWorkstream = true;
         if (generalMilestones.length > 0) {
             html += `<div class="timeline-workstream">`;
             html += `<div class="workstream-header milestones">Milestones</div>`;
-            html += `<div class="workstream-rows" style="min-height: 65px; position: relative;">`;
-            html += gridLinesHtml;
-            // Add TODAY label only once at the top
-            if (isFirstWorkstream && todayLabelHtml) {
-                html += todayLabelHtml;
-                isFirstWorkstream = false;
-            }
+            html += `<div class="workstream-rows" style="min-height: 65px; padding-top: 0;">`;
+
+            // Add week lines
+            html += weekLineHtml;
 
             generalMilestones.forEach(item => {
                 const itemDate = new Date(item.date);
@@ -735,24 +616,27 @@ async function initApp() {
             html += `</div></div>`;
         }
 
-        // Workstreams with smart positioning
+        // Workstreams
         Object.keys(workstreams).sort().forEach(workstreamName => {
             const items = workstreams[workstreamName];
-            const milestones = items.filter(i => i.type === 'milestone');
-            const activities = items.filter(i => i.type === 'activity');
 
             html += `<div class="timeline-workstream">`;
             html += `<div class="workstream-header">${escapeHtml(workstreamName)}</div>`;
-            html += `<div class="workstream-rows" style="position: relative;">`;
-            html += gridLinesHtml;
+            html += `<div class="workstream-rows">`;
 
-            // Add TODAY label only on first workstream
-            if (isFirstWorkstream && todayLabelHtml) {
-                html += todayLabelHtml;
-                isFirstWorkstream = false;
-            }
+            // Add week lines
+            html += weekLineHtml;
 
-            // Render milestones
+            const rows = [];
+            const milestones = items.filter(i => i.type === 'milestone');
+            const activities = items.filter(i => i.type === 'activity');
+
+            // Clear previous row assignments
+            activities.forEach(activity => {
+                delete activity.assignedRow;
+            });
+
+            // Render milestones first (at top)
             milestones.forEach(item => {
                 const itemDate = new Date(item.date);
                 const daysFromStart = Math.ceil((itemDate - minDate) / (1000 * 60 * 60 * 24));
@@ -767,9 +651,7 @@ async function initApp() {
                 `;
             });
 
-            // Smart row placement for activities to avoid text overlap
-            activities.forEach(activity => delete activity.assignedRow);
-
+            // Render activities - smart row placement to fit non-overlapping activities on same row
             activities.forEach((item, activityIndex) => {
                 const start = new Date(item.startDate);
                 const end = new Date(item.endDate);
@@ -778,78 +660,66 @@ async function initApp() {
                 const left = daysFromStart * pixelsPerDay;
                 const width = duration * pixelsPerDay;
 
-                // Calculate text width estimates (approximate) - increased padding for better spacing
-                const textPadding = 180; // Extra space for start/end dates and label (increased from 120)
-                const visualWidth = width + textPadding;
-
-                // Find non-overlapping row
+                // Find the first available row where this activity doesn't overlap with existing activities
                 let rowIndex = 0;
                 let foundRow = false;
 
-                while (!foundRow) {
-                    let canFit = true;
+                // Track occupied spaces in each row
+                if (!item.assignedRow) {
+                    // Check each row to see if this activity fits
+                    while (!foundRow) {
+                        let canFit = true;
 
-                    for (let i = 0; i < activityIndex; i++) {
-                        const prevItem = activities[i];
-                        if (prevItem.assignedRow === rowIndex) {
-                            const prevStart = new Date(prevItem.startDate);
-                            const prevEndDate = new Date(prevItem.endDate);
-                            const prevDaysFromStart = Math.ceil((prevStart - minDate) / (1000 * 60 * 60 * 24));
-                            const prevDuration = Math.ceil((prevEndDate - prevStart) / (1000 * 60 * 60 * 24)) + 1;
-                            const prevLeft = prevDaysFromStart * pixelsPerDay;
-                            const prevWidth = prevDuration * pixelsPerDay;
-                            const prevVisualWidth = prevWidth + textPadding;
+                        // Check all previously placed activities in this row
+                        for (let i = 0; i < activityIndex; i++) {
+                            const prevItem = activities[i];
+                            if (prevItem.assignedRow === rowIndex) {
+                                const prevStart = new Date(prevItem.startDate);
+                                const prevEnd = new Date(prevItem.endDate);
 
-                            // Check for visual overlap (including text)
-                            const currentEnd = left + visualWidth;
-                            const prevEnd = prevLeft + prevVisualWidth;
-
-                            if (!(left >= prevEnd || currentEnd <= prevLeft)) {
-                                canFit = false;
-                                break;
+                                // Check if there's overlap
+                                // Activities can share a row if one ends before the other starts
+                                // No overlap if: current starts AFTER previous ends, OR current ends BEFORE previous starts
+                                if (!(start > prevEnd || end < prevStart)) {
+                                    canFit = false;
+                                    break;
+                                }
                             }
                         }
-                    }
 
-                    if (canFit) {
-                        item.assignedRow = rowIndex;
-                        foundRow = true;
-                    } else {
-                        rowIndex++;
+                        if (canFit) {
+                            item.assignedRow = rowIndex;
+                            foundRow = true;
+                        } else {
+                            rowIndex++;
+                        }
                     }
                 }
 
+                // Activities start below milestones (if any)
                 const milestoneHeight = milestones.length > 0 ? 65 : 0;
-                const top = milestoneHeight + (item.assignedRow * 50) + 10; // Increased spacing from 40 to 50
+                const top = milestoneHeight + (item.assignedRow * 40) + 5; // 40px spacing between rows
+
                 const status = item.status || 'not-started';
                 const startDateStr = formatDateShort(item.startDate);
                 const endDateStr = formatDateShort(item.endDate);
 
-                // Determine if label should be inside or above the bar
-                // If bar is wide enough (>80px), put label inside
-                const labelInside = width > 80;
-                const labelClass = labelInside ? 'timeline-bar-label' : 'timeline-bar-label-above';
-
                 html += `
-                    <div class="timeline-bar"
-                         data-item-id="${item.id}"
-                         style="left: ${left}px; width: ${width}px; top: ${top}px; z-index: 3;"
-                         title="${escapeHtml(item.name)}\n${startDateStr} - ${endDateStr}">
-                        <div class="timeline-bar-drag-handle-start"></div>
+                    <div class="timeline-bar" style="left: ${left}px; width: ${width}px; top: ${top}px; z-index: 3;" title="${escapeHtml(item.name)}\n${startDateStr} - ${endDateStr}">
                         <div class="timeline-bar-shape ${status}"></div>
-                        <div class="${labelClass}">${escapeHtml(item.name)}</div>
+                        <div class="timeline-bar-label">${escapeHtml(item.name)}</div>
                         <div class="timeline-bar-start-date">${startDateStr}</div>
                         <div class="timeline-bar-end-date">${endDateStr}</div>
-                        <div class="timeline-bar-drag-handle-end"></div>
                     </div>
                 `;
             });
 
+            // Calculate total rows needed
             const maxRow = Math.max(...activities.map(a => a.assignedRow || 0), -1) + 1;
-            const totalActivityHeight = maxRow * 50; // Updated to match new spacing
-            const milestoneHeight = milestones.length > 0 ? 65 : 0;
-            const minHeight = Math.max(milestoneHeight + totalActivityHeight + 30, 100); // Increased padding
+            const totalActivityHeight = maxRow * 40;
 
+            const milestoneHeight = milestones.length > 0 ? 65 : 0;
+            const minHeight = Math.max(milestoneHeight + totalActivityHeight + 20, 100);
             html += `</div></div>`;
 
             const lastIndex = html.lastIndexOf('<div class="workstream-rows">');
@@ -862,196 +732,6 @@ async function initApp() {
 
         html += '</div></div>';
         timelineCanvas.innerHTML = html;
-
-        // Add drag-and-drop functionality
-        initDragAndDrop(minDate, pixelsPerDay);
-    }
-
-    // Initialize drag-and-drop for timeline bars
-    function initDragAndDrop(minDate, pixelsPerDay) {
-        const bars = document.querySelectorAll('.timeline-bar');
-
-        bars.forEach(bar => {
-            const itemId = bar.getAttribute('data-item-id');
-            const item = roadmapItems.find(i => i.id == itemId);
-            if (!item) return;
-
-            const startHandle = bar.querySelector('.timeline-bar-drag-handle-start');
-            const endHandle = bar.querySelector('.timeline-bar-drag-handle-end');
-
-            // Drag entire bar to move
-            bar.addEventListener('mousedown', (e) => {
-                if (e.target.classList.contains('timeline-bar-drag-handle-start') ||
-                    e.target.classList.contains('timeline-bar-drag-handle-end')) {
-                    return; // Let handle events take over
-                }
-
-                e.preventDefault();
-                draggedItem = item;
-                dragType = 'move';
-                dragStartX = e.clientX;
-                bar.classList.add('dragging');
-
-                const startLeft = parseInt(bar.style.left);
-                const startWidth = parseInt(bar.style.width);
-
-                const onMouseMove = (e) => {
-                    const deltaX = e.clientX - dragStartX;
-                    const newLeft = startLeft + deltaX;
-
-                    // Calculate new dates
-                    const newStartDays = Math.round(newLeft / pixelsPerDay);
-                    const newStartDate = new Date(minDate);
-                    newStartDate.setDate(newStartDate.getDate() + newStartDays);
-
-                    const duration = Math.ceil((new Date(item.endDate) - new Date(item.startDate)) / (1000 * 60 * 60 * 24));
-                    const newEndDate = new Date(newStartDate);
-                    newEndDate.setDate(newEndDate.getDate() + duration);
-
-                    bar.style.left = newLeft + 'px';
-                    bar.querySelector('.timeline-bar-start-date').textContent = formatDateShort(newStartDate.toISOString().split('T')[0]);
-                    bar.querySelector('.timeline-bar-end-date').textContent = formatDateShort(newEndDate.toISOString().split('T')[0]);
-                };
-
-                const onMouseUp = async (e) => {
-                    const deltaX = e.clientX - dragStartX;
-                    const newLeft = startLeft + deltaX;
-                    const newStartDays = Math.round(newLeft / pixelsPerDay);
-                    const newStartDate = new Date(minDate);
-                    newStartDate.setDate(newStartDate.getDate() + newStartDays);
-
-                    const duration = Math.ceil((new Date(item.endDate) - new Date(item.startDate)) / (1000 * 60 * 60 * 24));
-                    const newEndDate = new Date(newStartDate);
-                    newEndDate.setDate(newEndDate.getDate() + duration);
-
-                    item.startDate = newStartDate.toISOString().split('T')[0];
-                    item.endDate = newEndDate.toISOString().split('T')[0];
-
-                    await saveData();
-                    renderTable();
-                    renderTimeline();
-
-                    bar.classList.remove('dragging');
-                    document.removeEventListener('mousemove', onMouseMove);
-                    document.removeEventListener('mouseup', onMouseUp);
-                    draggedItem = null;
-                    dragType = null;
-                };
-
-                document.addEventListener('mousemove', onMouseMove);
-                document.addEventListener('mouseup', onMouseUp);
-            });
-
-            // Resize from start
-            if (startHandle) {
-                startHandle.addEventListener('mousedown', (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    draggedItem = item;
-                    dragType = 'resize-start';
-                    dragStartX = e.clientX;
-                    bar.classList.add('dragging');
-
-                    const startLeft = parseInt(bar.style.left);
-                    const startWidth = parseInt(bar.style.width);
-
-                    const onMouseMove = (e) => {
-                        const deltaX = e.clientX - dragStartX;
-                        const newLeft = startLeft + deltaX;
-                        const newWidth = startWidth - deltaX;
-
-                        if (newWidth > 10) {
-                            bar.style.left = newLeft + 'px';
-                            bar.style.width = newWidth + 'px';
-
-                            const newStartDays = Math.round(newLeft / pixelsPerDay);
-                            const newStartDate = new Date(minDate);
-                            newStartDate.setDate(newStartDate.getDate() + newStartDays);
-                            bar.querySelector('.timeline-bar-start-date').textContent = formatDateShort(newStartDate.toISOString().split('T')[0]);
-                        }
-                    };
-
-                    const onMouseUp = async (e) => {
-                        const deltaX = e.clientX - dragStartX;
-                        const newLeft = startLeft + deltaX;
-                        const newWidth = startWidth - deltaX;
-
-                        if (newWidth > 10) {
-                            const newStartDays = Math.round(newLeft / pixelsPerDay);
-                            const newStartDate = new Date(minDate);
-                            newStartDate.setDate(newStartDate.getDate() + newStartDays);
-                            item.startDate = newStartDate.toISOString().split('T')[0];
-
-                            await saveData();
-                            renderTable();
-                            renderTimeline();
-                        }
-
-                        bar.classList.remove('dragging');
-                        document.removeEventListener('mousemove', onMouseMove);
-                        document.removeEventListener('mouseup', onMouseUp);
-                        draggedItem = null;
-                        dragType = null;
-                    };
-
-                    document.addEventListener('mousemove', onMouseMove);
-                    document.addEventListener('mouseup', onMouseUp);
-                });
-            }
-
-            // Resize from end
-            if (endHandle) {
-                endHandle.addEventListener('mousedown', (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    draggedItem = item;
-                    dragType = 'resize-end';
-                    dragStartX = e.clientX;
-                    bar.classList.add('dragging');
-
-                    const startWidth = parseInt(bar.style.width);
-
-                    const onMouseMove = (e) => {
-                        const deltaX = e.clientX - dragStartX;
-                        const newWidth = startWidth + deltaX;
-
-                        if (newWidth > 10) {
-                            bar.style.width = newWidth + 'px';
-
-                            const durationDays = Math.round(newWidth / pixelsPerDay);
-                            const newEndDate = new Date(item.startDate);
-                            newEndDate.setDate(newEndDate.getDate() + durationDays - 1);
-                            bar.querySelector('.timeline-bar-end-date').textContent = formatDateShort(newEndDate.toISOString().split('T')[0]);
-                        }
-                    };
-
-                    const onMouseUp = async (e) => {
-                        const deltaX = e.clientX - dragStartX;
-                        const newWidth = startWidth + deltaX;
-
-                        if (newWidth > 10) {
-                            const durationDays = Math.round(newWidth / pixelsPerDay);
-                            const newEndDate = new Date(item.startDate);
-                            newEndDate.setDate(newEndDate.getDate() + durationDays - 1);
-                            item.endDate = newEndDate.toISOString().split('T')[0];
-
-                            await saveData();
-                            renderTable();
-                            renderTimeline();
-                        }
-
-                        bar.classList.remove('dragging');
-                        document.removeEventListener('mousemove', onMouseMove);
-                        document.removeEventListener('mouseup', onMouseUp);
-                        draggedItem = null;
-                        dragType = null;
-                    };
-
-                    document.addEventListener('mousemove', onMouseMove);
-                    document.addEventListener('mouseup', onMouseUp);
-                });
-            }
-        });
     }
 }
 
