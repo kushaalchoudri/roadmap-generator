@@ -587,6 +587,11 @@ textarea {
 
 .timeline-grid {
     position: relative;
+    border: 2px solid #3b82f6;
+    border-radius: 8px;
+    background: #f8fafc;
+    overflow: hidden; /* Ensure children don't overflow rounded corners */
+    padding: 5px 0; /* Small padding inside border */
 }
 
 .timeline-header-row {
@@ -868,14 +873,6 @@ textarea {
     box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
     z-index: 100; /* Very high z-index to ensure visibility */
     pointer-events: none;
-}
-
-.timeline-content {
-    position: relative;
-}
-
-.timeline-grid {
-    position: relative;
 }
 
 .timeline-bar:hover {

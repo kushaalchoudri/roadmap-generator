@@ -665,7 +665,7 @@ async function initApp() {
         // General milestones section and workstreams
         html += '<div class="timeline-grid" style="position: relative;">';
 
-        // Add vertical lines and today marker
+        // Add vertical lines and today marker - GLOBAL container spanning entire timeline
         let gridLinesHtml = '';
 
         // Add week/month lines based on view
@@ -705,18 +705,19 @@ async function initApp() {
             console.log('Today is outside timeline range');
         }
 
+        // Add global gridlines container that spans entire timeline height
+        html += `<div class="timeline-gridlines-container" style="position: absolute; top: 0; left: 200px; right: 0; bottom: 0; pointer-events: none; z-index: 1;">`;
+        html += gridLinesHtml;
+        html += todayLabelHtml;
+        html += `</div>`;
+
         // General milestones
         let isFirstWorkstream = true;
         if (generalMilestones.length > 0) {
             html += `<div class="timeline-workstream">`;
             html += `<div class="workstream-header milestones">Milestones</div>`;
             html += `<div class="workstream-rows" style="min-height: 65px; position: relative;">`;
-            html += gridLinesHtml;
-            // Add TODAY label only once at the top
-            if (isFirstWorkstream && todayLabelHtml) {
-                html += todayLabelHtml;
-                isFirstWorkstream = false;
-            }
+            // Gridlines are now in global container, not here
 
             generalMilestones.forEach(item => {
                 const itemDate = new Date(item.date);
@@ -744,13 +745,7 @@ async function initApp() {
             html += `<div class="timeline-workstream">`;
             html += `<div class="workstream-header">${escapeHtml(workstreamName)}</div>`;
             html += `<div class="workstream-rows" style="position: relative;">`;
-            html += gridLinesHtml;
-
-            // Add TODAY label only on first workstream
-            if (isFirstWorkstream && todayLabelHtml) {
-                html += todayLabelHtml;
-                isFirstWorkstream = false;
-            }
+            // Gridlines are now in global container, not here
 
             // Render milestones
             milestones.forEach(item => {
