@@ -2,7 +2,7 @@
 let roadmapItems = [];
 let appInitialized = false;
 let currentRoadmapId = null;
-let currentView = 'month'; // 'month', 'quarter', or 'year'
+let currentView = 'week'; // Default to 'week' view
 let draggedItem = null;
 let dragStartX = 0;
 let dragType = null; // 'move', 'resize-start', 'resize-end'
@@ -319,7 +319,7 @@ async function initApp() {
         });
     }
 
-    // Render table
+    // Render table with workstream grouping and expand/collapse
     function renderTable() {
         console.log('renderTable called, roadmapItems count:', roadmapItems.length);
         if (roadmapItems.length === 0) {
@@ -332,84 +332,69 @@ async function initApp() {
         emptyState.classList.remove('show');
         document.querySelector('.table-container').style.display = 'block';
 
-        tableBody.innerHTML = roadmapItems.map((item, index) => {
-            const isMilestone = item.type === 'milestone';
+        // Group items by workstream
+        const groupedItems = {};
+        const noWorkstream = [];
 
-            // For milestones, use date field or startDate, and set both start and end to same value
-            let displayStartDate = '';
-            let displayEndDate = '';
-
-            if (isMilestone) {
-                displayStartDate = item.date || item.startDate || '';
-                displayEndDate = displayStartDate; // Same as start date for milestones
+        roadmapItems.forEach(item => {
+            const workstream = item.workstream?.trim() || '';
+            if (workstream) {
+                if (!groupedItems[workstream]) {
+                    groupedItems[workstream] = [];
+                }
+                groupedItems[workstream].push(item);
             } else {
-                displayStartDate = item.startDate || '';
-                displayEndDate = item.endDate || '';
+                noWorkstream.push(item);
             }
+        });
 
-            return `
-                <tr data-id="${item.id}">
-                    <td>
-                        <input type="text"
-                               class="editable-field"
-                               data-field="workstream"
-                               value="${escapeHtml(item.workstream || '')}"
-                               placeholder="${isMilestone ? 'Optional' : 'Required'}"
-                               ${isMilestone ? '' : 'required'}>
-                    </td>
-                    <td>
-                        <select class="editable-field" data-field="type">
-                            <option value="activity" ${item.type === 'activity' ? 'selected' : ''}>Activity</option>
-                            <option value="milestone" ${item.type === 'milestone' ? 'selected' : ''}>Milestone</option>
-                        </select>
-                    </td>
-                    <td>
-                        <input type="text"
-                               class="editable-field"
-                               data-field="name"
-                               value="${escapeHtml(item.name || '')}"
-                               placeholder="Enter name"
-                               required>
-                    </td>
-                    <td>
-                        <input type="date"
-                               class="editable-field milestone-date-field"
-                               data-field="${isMilestone ? 'date' : 'startDate'}"
-                               value="${displayStartDate}"
-                               ${isMilestone ? '' : ''}>
-                    </td>
-                    <td>
-                        <input type="date"
-                               class="editable-field"
-                               data-field="endDate"
-                               value="${displayEndDate}"
-                               ${isMilestone ? 'readonly style="background: #f5f5f5;"' : ''}>
-                    </td>
-                    <td>
-                        <select class="editable-field status-${item.status || 'not-started'}"
-                                data-field="status"
-                                ${isMilestone ? 'disabled' : ''}>
-                            <option value="not-started" class="status-not-started" ${(item.status || 'not-started') === 'not-started' ? 'selected' : ''}>Not Started</option>
-                            <option value="in-progress" class="status-in-progress" ${item.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
-                            <option value="at-risk" class="status-at-risk" ${item.status === 'at-risk' ? 'selected' : ''}>At Risk</option>
-                            <option value="completed" class="status-completed" ${item.status === 'completed' ? 'selected' : ''}>Completed</option>
-                        </select>
-                    </td>
-                    <td>
-                        <textarea class="editable-field"
-                                  data-field="description"
-                                  placeholder="Optional"
-                                  rows="1">${escapeHtml(item.description || '')}</textarea>
-                    </td>
-                    <td>
-                        <div class="table-actions">
-                            <button class="btn-table-action btn-table-duplicate" onclick="duplicateRow('${item.id}')">Duplicate</button>
-                            <button class="btn-table-action btn-table-delete" onclick="deleteRow('${item.id}')">Delete</button>
-                        </div>
+        // Sort workstream names
+        const sortedWorkstreams = Object.keys(groupedItems).sort();
+
+        let html = '';
+
+        // Render each workstream group
+        sortedWorkstreams.forEach(workstreamName => {
+            const items = groupedItems[workstreamName];
+            const workstreamId = `workstream-${workstreamName.replace(/\s+/g, '-')}`;
+            const isCollapsed = sessionStorage.getItem(workstreamId) === 'collapsed';
+
+            // Workstream header row
+            html += `
+                <tr class="workstream-header-row" onclick="toggleWorkstream('${workstreamId}')">
+                    <td colspan="8" style="cursor: pointer; background: #f3f4f6; font-weight: 700; padding: 12px;">
+                        <span class="workstream-toggle-icon" id="${workstreamId}-icon">${isCollapsed ? '▶' : '▼'}</span>
+                        ${escapeHtml(workstreamName)} (${items.length} items)
                     </td>
                 </tr>
             `;
-        }).join('');
+
+            // Workstream items
+            items.forEach(item => {
+                html += renderTableRow(item, workstreamId, isCollapsed);
+            });
+        });
+
+        // Render items without workstream
+        if (noWorkstream.length > 0) {
+            const workstreamId = 'workstream-none';
+            const isCollapsed = sessionStorage.getItem(workstreamId) === 'collapsed';
+
+            html += `
+                <tr class="workstream-header-row" onclick="toggleWorkstream('${workstreamId}')">
+                    <td colspan="8" style="cursor: pointer; background: #fef3c7; font-weight: 700; padding: 12px;">
+                        <span class="workstream-toggle-icon" id="${workstreamId}-icon">${isCollapsed ? '▶' : '▼'}</span>
+                        No Workstream (${noWorkstream.length} items)
+                    </td>
+                </tr>
+            `;
+
+            noWorkstream.forEach(item => {
+                html += renderTableRow(item, workstreamId, isCollapsed);
+            });
+        }
+
+        tableBody.innerHTML = html;
 
         // Add event listeners for inline editing
         document.querySelectorAll('.editable-field').forEach(field => {
@@ -421,7 +406,116 @@ async function initApp() {
         document.querySelectorAll('input[data-field="workstream"]').forEach(input => {
             createWorkstreamDatalist(input);
         });
+
+        // Auto-grow textareas
+        document.querySelectorAll('textarea.editable-field').forEach(textarea => {
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 'px';
+            textarea.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = this.scrollHeight + 'px';
+            });
+        });
     }
+
+    // Helper function to render a single table row
+    function renderTableRow(item, workstreamId, isCollapsed) {
+        const isMilestone = item.type === 'milestone';
+
+        let displayStartDate = '';
+        let displayEndDate = '';
+
+        if (isMilestone) {
+            displayStartDate = item.date || item.startDate || '';
+            displayEndDate = displayStartDate;
+        } else {
+            displayStartDate = item.startDate || '';
+            displayEndDate = item.endDate || '';
+        }
+
+        return `
+            <tr data-id="${item.id}" class="workstream-item" data-workstream="${workstreamId}" style="display: ${isCollapsed ? 'none' : 'table-row'};">
+                <td>
+                    <input type="text"
+                           class="editable-field"
+                           data-field="workstream"
+                           value="${escapeHtml(item.workstream || '')}"
+                           placeholder="${isMilestone ? 'Optional' : 'Required'}"
+                           ${isMilestone ? '' : 'required'}>
+                </td>
+                <td>
+                    <select class="editable-field" data-field="type">
+                        <option value="activity" ${item.type === 'activity' ? 'selected' : ''}>Activity</option>
+                        <option value="milestone" ${item.type === 'milestone' ? 'selected' : ''}>Milestone</option>
+                    </select>
+                </td>
+                <td>
+                    <input type="text"
+                           class="editable-field"
+                           data-field="name"
+                           value="${escapeHtml(item.name || '')}"
+                           placeholder="Enter name"
+                           required>
+                </td>
+                <td>
+                    <input type="date"
+                           class="editable-field milestone-date-field"
+                           data-field="${isMilestone ? 'date' : 'startDate'}"
+                           value="${displayStartDate}"
+                           ${isMilestone ? '' : ''}>
+                </td>
+                <td>
+                    <input type="date"
+                           class="editable-field"
+                           data-field="endDate"
+                           value="${displayEndDate}"
+                           ${isMilestone ? 'readonly style="background: #f5f5f5;"' : ''}>
+                </td>
+                <td>
+                    <select class="editable-field status-${item.status || 'not-started'}"
+                            data-field="status"
+                            ${isMilestone ? 'disabled' : ''}>
+                        <option value="not-started" class="status-not-started" ${(item.status || 'not-started') === 'not-started' ? 'selected' : ''}>Not Started</option>
+                        <option value="in-progress" class="status-in-progress" ${item.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
+                        <option value="at-risk" class="status-at-risk" ${item.status === 'at-risk' ? 'selected' : ''}>At Risk</option>
+                        <option value="completed" class="status-completed" ${item.status === 'completed' ? 'selected' : ''}>Completed</option>
+                    </select>
+                </td>
+                <td>
+                    <textarea class="editable-field"
+                              data-field="description"
+                              placeholder="Optional"
+                              rows="1">${escapeHtml(item.description || '')}</textarea>
+                </td>
+                <td>
+                    <div class="table-actions">
+                        <button class="btn-table-action btn-table-duplicate" onclick="duplicateRow('${item.id}')">Duplicate</button>
+                        <button class="btn-table-action btn-table-delete" onclick="deleteRow('${item.id}')">Delete</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
+
+    // Toggle workstream expand/collapse
+    window.toggleWorkstream = function(workstreamId) {
+        const items = document.querySelectorAll(`tr[data-workstream="${workstreamId}"]`);
+        const icon = document.getElementById(`${workstreamId}-icon`);
+        const isCollapsed = items[0]?.style.display === 'none';
+
+        items.forEach(item => {
+            item.style.display = isCollapsed ? 'table-row' : 'none';
+        });
+
+        icon.textContent = isCollapsed ? '▼' : '▶';
+
+        // Save state to sessionStorage
+        if (isCollapsed) {
+            sessionStorage.removeItem(workstreamId);
+        } else {
+            sessionStorage.setItem(workstreamId, 'collapsed');
+        }
+    };
 
     // Handle field changes
     function handleFieldChange(e) {
@@ -734,10 +828,18 @@ async function initApp() {
 
         // Add week/month lines based on view
         if (currentView === 'week') {
-            // Week view - show daily gridlines
+            // Week view - show daily gridlines + thicker month boundaries
             for (let day = 0; day <= totalDays; day++) {
+                const currentDate = new Date(minDate);
+                currentDate.setDate(currentDate.getDate() + day);
                 const dayLeft = day * pixelsPerDay;
-                gridLinesHtml += `<div class="week-line" style="left: ${dayLeft}px; opacity: 0.3;"></div>`;
+
+                // Check if this is the first day of a month (thicker line)
+                if (currentDate.getDate() === 1) {
+                    gridLinesHtml += `<div class="month-line" style="left: ${dayLeft}px;"></div>`;
+                } else {
+                    gridLinesHtml += `<div class="week-line" style="left: ${dayLeft}px; opacity: 0.3;"></div>`;
+                }
             }
         } else if (currentView === 'month') {
             periods.forEach(period => {

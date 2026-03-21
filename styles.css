@@ -233,6 +233,33 @@ textarea {
     cursor: pointer;
 }
 
+/* Workstream grouping styles */
+.workstream-header-row {
+    background: #f3f4f6;
+    font-weight: 700;
+}
+
+.workstream-header-row:hover {
+    background: #e5e7eb;
+}
+
+.workstream-toggle-icon {
+    display: inline-block;
+    width: 20px;
+    text-align: center;
+    margin-right: 8px;
+    font-size: 14px;
+    color: #3b82f6;
+}
+
+.workstream-item {
+    transition: background-color 0.2s;
+}
+
+.workstream-item:hover {
+    background: #f9fafb;
+}
+
 .table-actions {
     display: flex;
     gap: 5px;
@@ -856,6 +883,19 @@ textarea {
     pointer-events: none;
     z-index: 1;
     opacity: 0.4;
+}
+
+/* Month separator lines (thicker) */
+.month-line {
+    position: absolute;
+    width: 3px;
+    background: linear-gradient(to bottom, transparent 0%, #3b82f6 10%, #3b82f6 90%, transparent 100%);
+    top: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0.6;
+    box-shadow: 0 0 4px rgba(59, 130, 246, 0.3);
 }
 
 .today-marker {
