@@ -198,8 +198,12 @@ textarea {
 }
 
 .items-table td {
-    padding: 8px;
+    padding: 6px 8px; /* More compact - reduced from 8px */
     vertical-align: middle;
+}
+
+.workstream-item td {
+    padding: 5px 8px !important; /* Even more compact for items */
 }
 
 .items-table input[type="text"],
@@ -207,10 +211,10 @@ textarea {
 .items-table select,
 .items-table textarea {
     width: 100%;
-    padding: 6px 8px;
+    padding: 4px 6px; /* More compact padding */
     border: 1px solid #e0e0e0;
     border-radius: 4px;
-    font-size: 13px;
+    font-size: 12px; /* Smaller font for compactness */
     font-family: inherit;
     transition: border-color 0.2s;
 }
@@ -237,6 +241,11 @@ textarea {
 .workstream-header-row {
     background: #f3f4f6;
     font-weight: 700;
+}
+
+.workstream-header-row td {
+    padding: 8px 12px !important; /* Compact padding */
+    font-size: 13px;
 }
 
 .workstream-header-row:hover {

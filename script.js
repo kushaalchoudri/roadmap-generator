@@ -359,12 +359,12 @@ async function initApp() {
             const workstreamId = `workstream-${workstreamName.replace(/\s+/g, '-')}`;
             const isCollapsed = sessionStorage.getItem(workstreamId) === 'collapsed';
 
-            // Workstream header row
+            // Workstream header row - compact styling
             html += `
                 <tr class="workstream-header-row" onclick="toggleWorkstream('${workstreamId}')">
-                    <td colspan="8" style="cursor: pointer; background: #f3f4f6; font-weight: 700; padding: 12px;">
+                    <td colspan="8" style="cursor: pointer;">
                         <span class="workstream-toggle-icon" id="${workstreamId}-icon">${isCollapsed ? '▶' : '▼'}</span>
-                        ${escapeHtml(workstreamName)} (${items.length} items)
+                        ${escapeHtml(workstreamName)} <span style="font-weight: 400; font-size: 11px; color: #6b7280;">(${items.length})</span>
                     </td>
                 </tr>
             `;
@@ -382,9 +382,9 @@ async function initApp() {
 
             html += `
                 <tr class="workstream-header-row" onclick="toggleWorkstream('${workstreamId}')">
-                    <td colspan="8" style="cursor: pointer; background: #fef3c7; font-weight: 700; padding: 12px;">
+                    <td colspan="8" style="cursor: pointer; background: #fef3c7;">
                         <span class="workstream-toggle-icon" id="${workstreamId}-icon">${isCollapsed ? '▶' : '▼'}</span>
-                        No Workstream (${noWorkstream.length} items)
+                        No Workstream <span style="font-weight: 400; font-size: 11px; color: #6b7280;">(${noWorkstream.length})</span>
                     </td>
                 </tr>
             `;
@@ -797,13 +797,16 @@ async function initApp() {
                 html += `</div>`;
             }
 
-            // Show days in week view
+            // Show days in week view with actual dates
             if (currentView === 'week' && period.days === 7) {
                 html += `<div class="timeline-weeks" style="display: flex;">`;
-                const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                dayNames.forEach(dayName => {
-                    html += `<div class="timeline-week" style="flex: 1; font-size: 10px;">${dayName}</div>`;
-                });
+                const weekStart = new Date(period.start);
+                for (let i = 0; i < 7; i++) {
+                    const dayDate = new Date(weekStart);
+                    dayDate.setDate(dayDate.getDate() + i);
+                    const dateStr = dayDate.getDate(); // Just the day number
+                    html += `<div class="timeline-week" style="flex: 1; font-size: 10px;">${dateStr}</div>`;
+                }
                 html += `</div>`;
             }
 
