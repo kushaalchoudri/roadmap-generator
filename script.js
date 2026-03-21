@@ -893,7 +893,7 @@ async function initApp() {
         // General milestones
         let isFirstWorkstream = true;
         if (generalMilestones.length > 0) {
-            html += `<div class="timeline-workstream">`;
+            html += `<div class="timeline-workstream" data-workstream-name="Milestones">`;
             html += `<div class="workstream-header milestones">Milestones</div>`;
             html += `<div class="workstream-rows" style="min-height: 65px; position: relative; min-width: ${contentWidth - 200}px;">`;
             // Gridlines are now in global container, not here
@@ -912,7 +912,9 @@ async function initApp() {
                 `;
             });
 
-            html += `</div></div>`;
+            html += `</div>`;
+            html += `<div class="workstream-resize-handle" title="Drag to resize height"></div>`;
+            html += `</div>`;
         }
 
         // Workstreams with smart positioning
@@ -921,7 +923,7 @@ async function initApp() {
             const milestones = items.filter(i => i.type === 'milestone');
             const activities = items.filter(i => i.type === 'activity');
 
-            html += `<div class="timeline-workstream">`;
+            html += `<div class="timeline-workstream" data-workstream-name="${escapeHtml(workstreamName)}">`;
             html += `<div class="workstream-header">${escapeHtml(workstreamName)}</div>`;
             html += `<div class="workstream-rows" style="position: relative; min-width: ${contentWidth - 200}px;">`;
             // Gridlines are now in global container, not here
@@ -1026,7 +1028,10 @@ async function initApp() {
             const labelAboveHeight = 20; // Height of label when positioned above bar
             const minHeight = Math.max(milestoneHeight + totalActivityHeight + barHeight + labelAboveHeight + 20, 100); // Increased padding
 
-            html += `</div></div>`;
+            html += `</div>`;
+            // Add resize handle
+            html += `<div class="workstream-resize-handle" title="Drag to resize height"></div>`;
+            html += `</div>`;
 
             // Replace the workstream-rows div to add calculated min-height
             const searchStr = `<div class="workstream-rows" style="position: relative; min-width: ${contentWidth - 200}px;">`;
@@ -1043,6 +1048,9 @@ async function initApp() {
 
         // Add drag-and-drop functionality
         initDragAndDrop(minDate, pixelsPerDay);
+
+        // Add workstream resize functionality
+        initWorkstreamResize();
     }
 
     // Initialize drag-and-drop for timeline bars
@@ -1228,6 +1236,51 @@ async function initApp() {
                     document.addEventListener('mousemove', onMouseMove);
                     document.addEventListener('mouseup', onMouseUp);
                 });
+            }
+        });
+    }
+
+    // Initialize workstream resize functionality
+    function initWorkstreamResize() {
+        const resizeHandles = document.querySelectorAll('.workstream-resize-handle');
+
+        resizeHandles.forEach(handle => {
+            const workstreamDiv = handle.parentElement;
+            const workstreamRows = workstreamDiv.querySelector('.workstream-rows');
+            const workstreamName = workstreamDiv.getAttribute('data-workstream-name');
+
+            if (!workstreamRows) return;
+
+            handle.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                const startY = e.clientY;
+                const startHeight = workstreamRows.offsetHeight;
+
+                const onMouseMove = (e) => {
+                    const deltaY = e.clientY - startY;
+                    const newHeight = Math.max(50, startHeight + deltaY); // Minimum 50px
+                    workstreamRows.style.height = newHeight + 'px';
+                    workstreamRows.style.minHeight = newHeight + 'px';
+                };
+
+                const onMouseUp = () => {
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+
+                    // Save the height to sessionStorage
+                    const finalHeight = workstreamRows.offsetHeight;
+                    sessionStorage.setItem(`workstream-height-${workstreamName}`, finalHeight);
+                };
+
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            });
+
+            // Restore saved height
+            const savedHeight = sessionStorage.getItem(`workstream-height-${workstreamName}`);
+            if (savedHeight) {
+                workstreamRows.style.height = savedHeight + 'px';
+                workstreamRows.style.minHeight = savedHeight + 'px';
             }
         });
     }

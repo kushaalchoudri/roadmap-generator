@@ -273,6 +273,34 @@ textarea {
     background: #f9fafb;
 }
 
+/* Workstream resize handle */
+.workstream-resize-handle {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 8px;
+    background: linear-gradient(to bottom, transparent, #3b82f6);
+    cursor: ns-resize;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 10;
+}
+
+.timeline-workstream:hover .workstream-resize-handle {
+    opacity: 0.3;
+}
+
+.workstream-resize-handle:hover {
+    opacity: 0.6 !important;
+    background: linear-gradient(to bottom, transparent, #2563eb);
+}
+
+.workstream-resize-handle:active {
+    opacity: 0.8 !important;
+    background: #2563eb;
+}
+
 .table-actions {
     display: flex;
     gap: 3px; /* Reduced from 5px */
@@ -686,6 +714,7 @@ textarea {
     display: flex;
     margin-bottom: 5px;
     border-bottom: 1px solid #e0e0e0;
+    position: relative; /* For resize handle positioning */
 }
 
 .workstream-header {
