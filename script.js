@@ -6,6 +6,7 @@ let currentView = 'week'; // Default to 'week' view
 let draggedItem = null;
 let dragStartX = 0;
 let dragType = null; // 'move', 'resize-start', 'resize-end'
+let workstreamOrder = {}; // Track custom workstream order
 
 // Check if Firebase is initialized
 const useFirebase = typeof firebase !== 'undefined' && typeof db !== 'undefined';
@@ -160,6 +161,17 @@ async function initApp() {
     appInitialized = true;
     console.log('App initialized successfully');
 
+    // Load workstream order from sessionStorage
+    const savedOrder = sessionStorage.getItem('workstreamOrder');
+    if (savedOrder) {
+        try {
+            workstreamOrder = JSON.parse(savedOrder);
+        } catch (e) {
+            console.error('Error loading workstream order:', e);
+            workstreamOrder = {};
+        }
+    }
+
     // Load current roadmap
     const roadmap = await loadCurrentRoadmap();
     if (!roadmap) {
@@ -302,10 +314,46 @@ async function initApp() {
 
     // Capture timeline as image
     function captureTimeline() {
+        const timelineSection = document.querySelector('.timeline-section');
+        const timelineContent = timelineCanvas.querySelector('.timeline-content');
+
+        if (!timelineContent) {
+            alert('Timeline content not found');
+            return;
+        }
+
+        // Get the full dimensions
+        const fullWidth = timelineContent.scrollWidth;
+        const fullHeight = timelineContent.scrollHeight;
+
+        // Temporarily remove scrollbars and set full size for capture
+        const originalStyles = {
+            overflow: timelineCanvas.style.overflow,
+            maxHeight: timelineCanvas.style.maxHeight,
+            height: timelineCanvas.style.height
+        };
+
+        timelineCanvas.style.overflow = 'visible';
+        timelineCanvas.style.maxHeight = 'none';
+        timelineCanvas.style.height = 'auto';
+
         html2canvas(timelineCanvas, {
-            backgroundColor: '#fafafa',
-            scale: 2
+            backgroundColor: '#ffffff',
+            scale: 2,
+            width: fullWidth + 50, // Add padding
+            height: fullHeight + 50,
+            windowWidth: fullWidth + 50,
+            windowHeight: fullHeight + 50,
+            scrollX: 0,
+            scrollY: 0,
+            useCORS: true,
+            allowTaint: true
         }).then(canvas => {
+            // Restore original styles
+            timelineCanvas.style.overflow = originalStyles.overflow;
+            timelineCanvas.style.maxHeight = originalStyles.maxHeight;
+            timelineCanvas.style.height = originalStyles.height;
+
             canvas.toBlob((blob) => {
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -316,6 +364,13 @@ async function initApp() {
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
             });
+        }).catch(error => {
+            // Restore original styles on error
+            timelineCanvas.style.overflow = originalStyles.overflow;
+            timelineCanvas.style.maxHeight = originalStyles.maxHeight;
+            timelineCanvas.style.height = originalStyles.height;
+            console.error('Error capturing timeline:', error);
+            alert('Error capturing timeline. Please try again.');
         });
     }
 
@@ -918,13 +973,27 @@ async function initApp() {
         }
 
         // Workstreams with smart positioning
-        Object.keys(workstreams).sort().forEach(workstreamName => {
+        // Get sorted workstreams considering custom order
+        const sortedWorkstreamNames = Object.keys(workstreams).sort((a, b) => {
+            const orderA = workstreamOrder[a] ?? 999;
+            const orderB = workstreamOrder[b] ?? 999;
+            if (orderA !== orderB) return orderA - orderB;
+            return a.localeCompare(b); // Alphabetical if same order
+        });
+
+        sortedWorkstreamNames.forEach((workstreamName, index) => {
             const items = workstreams[workstreamName];
             const milestones = items.filter(i => i.type === 'milestone');
             const activities = items.filter(i => i.type === 'activity');
 
             html += `<div class="timeline-workstream" data-workstream-name="${escapeHtml(workstreamName)}">`;
-            html += `<div class="workstream-header">${escapeHtml(workstreamName)}</div>`;
+            html += `<div class="workstream-header">
+                <span>${escapeHtml(workstreamName)}</span>
+                <div class="workstream-move-buttons">
+                    <button class="workstream-move-btn" onclick="moveWorkstream('${escapeHtml(workstreamName)}', 'up')" title="Move up" ${index === 0 ? 'disabled' : ''}>▲</button>
+                    <button class="workstream-move-btn" onclick="moveWorkstream('${escapeHtml(workstreamName)}', 'down')" title="Move down" ${index === sortedWorkstreamNames.length - 1 ? 'disabled' : ''}>▼</button>
+                </div>
+            </div>`;
             html += `<div class="workstream-rows" style="position: relative; min-width: ${contentWidth - 200}px;">`;
             // Gridlines are now in global container, not here
 
@@ -1448,6 +1517,60 @@ async function duplicateRow(id) {
         }
     });
 }
+
+// Move workstream up or down
+window.moveWorkstream = function(workstreamName, direction) {
+    // Get current workstreams in order
+    const workstreams = {};
+    roadmapItems.forEach(item => {
+        const ws = item.workstream?.trim() || '';
+        if (ws && !workstreams[ws]) {
+            workstreams[ws] = true;
+        }
+    });
+
+    const allWorkstreams = Object.keys(workstreams).sort((a, b) => {
+        const orderA = workstreamOrder[a] ?? 999;
+        const orderB = workstreamOrder[b] ?? 999;
+        if (orderA !== orderB) return orderA - orderB;
+        return a.localeCompare(b);
+    });
+
+    const currentIndex = allWorkstreams.indexOf(workstreamName);
+    if (currentIndex === -1) return;
+
+    // Initialize order if not set
+    allWorkstreams.forEach((ws, idx) => {
+        if (workstreamOrder[ws] === undefined) {
+            workstreamOrder[ws] = idx;
+        }
+    });
+
+    if (direction === 'up' && currentIndex > 0) {
+        // Swap with previous
+        const prevWorkstream = allWorkstreams[currentIndex - 1];
+        const temp = workstreamOrder[workstreamName];
+        workstreamOrder[workstreamName] = workstreamOrder[prevWorkstream];
+        workstreamOrder[prevWorkstream] = temp;
+    } else if (direction === 'down' && currentIndex < allWorkstreams.length - 1) {
+        // Swap with next
+        const nextWorkstream = allWorkstreams[currentIndex + 1];
+        const temp = workstreamOrder[workstreamName];
+        workstreamOrder[workstreamName] = workstreamOrder[nextWorkstream];
+        workstreamOrder[nextWorkstream] = temp;
+    }
+
+    // Save to sessionStorage
+    sessionStorage.setItem('workstreamOrder', JSON.stringify(workstreamOrder));
+
+    // Re-render timeline
+    const renderFn = document.querySelector('.timeline-canvas')?.__renderTimeline;
+    if (typeof renderTimeline === 'function') {
+        renderTimeline();
+    } else {
+        location.reload(); // Fallback
+    }
+};
 
 async function deleteRow(id) {
     if (confirm('Are you sure you want to delete this item?')) {
