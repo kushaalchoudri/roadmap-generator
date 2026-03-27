@@ -140,19 +140,42 @@ class RoadmapDatabase {
      */
     async importFromFile(file) {
         return new Promise((resolve, reject) => {
+            console.log('Starting import of file:', file.name, 'type:', file.type, 'size:', file.size);
+
             const reader = new FileReader();
             reader.onload = async (e) => {
                 try {
+                    console.log('File read successfully, size:', e.target.result.byteLength, 'bytes');
                     const uint8Array = new Uint8Array(e.target.result);
+                    console.log('Created Uint8Array, length:', uint8Array.length);
+
+                    // Close existing database if open
+                    if (this.db) {
+                        this.db.close();
+                    }
+
                     this.db = new this.SQL.Database(uint8Array);
+                    console.log('Database loaded successfully');
+
+                    // Run migration to fix orphaned items
+                    const migrated = await this.migrateOrphanedItems();
+                    if (migrated > 0) {
+                        console.log(`Migration: Created ${migrated} missing roadmap records`);
+                    }
+
                     this.saveToLocalStorage();
-                    console.log('Database imported successfully');
+                    console.log('Database saved to localStorage');
+
                     resolve(true);
                 } catch (error) {
+                    console.error('Error during import:', error);
                     reject(error);
                 }
             };
-            reader.onerror = reject;
+            reader.onerror = (error) => {
+                console.error('FileReader error:', error);
+                reject(error);
+            };
             reader.readAsArrayBuffer(file);
         });
     }
@@ -423,6 +446,49 @@ class RoadmapDatabase {
             items: itemsResult[0]?.values[0]?.[0] || 0,
             size: this.db.export().length
         };
+    }
+
+    /**
+     * Migrate orphaned items to create missing roadmap records
+     */
+    async migrateOrphanedItems() {
+        try {
+            // Find all unique roadmap_ids in items table
+            const result = this.db.exec('SELECT DISTINCT roadmap_id FROM items');
+            if (result.length === 0) return 0;
+
+            let created = 0;
+            const roadmapIds = result[0].values.map(row => row[0]);
+
+            for (const roadmapId of roadmapIds) {
+                // Check if roadmap record exists
+                const roadmapExists = this.db.exec('SELECT id FROM roadmaps WHERE id = ?', [roadmapId]);
+
+                if (roadmapExists.length === 0 || roadmapExists[0].values.length === 0) {
+                    // Create missing roadmap record
+                    const now = new Date().toISOString();
+                    const name = `Roadmap ${roadmapId}`; // Default name
+
+                    this.db.run(
+                        'INSERT INTO roadmaps (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)',
+                        [roadmapId, name, now, now]
+                    );
+
+                    console.log(`Created missing roadmap record for ID: ${roadmapId}`);
+                    created++;
+                }
+            }
+
+            if (created > 0) {
+                this.saveToLocalStorage();
+                console.log(`Migration complete: created ${created} roadmap records`);
+            }
+
+            return created;
+        } catch (error) {
+            console.error('Error during migration:', error);
+            return 0;
+        }
     }
 }
 

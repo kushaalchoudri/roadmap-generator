@@ -330,6 +330,39 @@ textarea {
     background: #2563eb;
 }
 
+/* Timeline border resize handle (for extending timeline) */
+.timeline-border-resize-handle {
+    position: absolute;
+    top: 0;
+    right: -4px;
+    bottom: 0;
+    width: 12px;
+    background: linear-gradient(to right, transparent, #3b82f6);
+    cursor: ew-resize;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 100;
+    border-radius: 0 8px 8px 0;
+}
+
+.timeline-bordered-container {
+    position: relative;
+}
+
+.timeline-bordered-container:hover .timeline-border-resize-handle {
+    opacity: 0.4;
+}
+
+.timeline-border-resize-handle:hover {
+    opacity: 0.8 !important;
+    background: linear-gradient(to right, transparent, #2563eb);
+}
+
+.timeline-border-resize-handle:active {
+    opacity: 1 !important;
+    background: #2563eb;
+}
+
 .table-actions {
     display: flex;
     gap: 3px; /* Reduced from 5px */
@@ -695,6 +728,7 @@ textarea {
     position: relative;
     background: #f8fafc;
     overflow: visible; /* Allow TODAY label and content to show outside */
+    width: 100%;
 }
     padding: 5px 0; /* Small padding inside border */
 }
@@ -738,8 +772,8 @@ textarea {
 .timeline-workstream {
     display: flex;
     margin-bottom: 5px;
-    border-bottom: 3px solid #3b82f6; /* Thicker blue border between workstreams */
     position: relative; /* For resize handle positioning */
+    border-bottom: 3px solid #3b82f6; /* Direct border - simpler approach */
 }
 
 .workstream-header {
@@ -818,9 +852,9 @@ textarea {
     position: relative;
     min-height: 100px;
     padding-top: 35px; /* Space for TODAY label at top */
-    overflow: visible;
+    overflow: hidden; /* Prevent overflow beyond border */
     background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 50%, #dbeafe 100%); /* Light blue gradient background */
-}
+    width: 100%; /* Ensure it fills the container */
 }
 
 .timeline-milestone {

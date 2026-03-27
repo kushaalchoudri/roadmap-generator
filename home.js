@@ -1,40 +1,49 @@
-// Check if Firebase is initialized
-const useFirebase = typeof firebase !== 'undefined' && typeof db !== 'undefined';
+// Check if database is initialized
+const useSQLite = typeof roadmapDB !== 'undefined';
 
 // Load all saved roadmaps
 async function loadRoadmaps() {
-    if (useFirebase) {
+    // Use SQLite database
+    console.log('loadRoadmaps called, roadmapDB:', roadmapDB);
+    console.log('roadmapDB.db:', roadmapDB ? roadmapDB.db : 'roadmapDB undefined');
+
+    if (roadmapDB && roadmapDB.db) {
         try {
-            const snapshot = await db.collection('roadmaps').get();
+            const roadmapsArray = await roadmapDB.getAllRoadmaps();
+            console.log('Loaded roadmaps from SQLite:', roadmapsArray);
             const roadmaps = {};
-            snapshot.forEach(doc => {
-                roadmaps[doc.id] = doc.data();
-            });
+
+            // Convert array to object with IDs as keys
+            for (const roadmap of roadmapsArray) {
+                // Load items for this roadmap
+                const items = await roadmapDB.getRoadmapItems(roadmap.id);
+                console.log(`Loaded ${items.length} items for roadmap ${roadmap.id}`);
+                roadmaps[roadmap.id] = {
+                    name: roadmap.name,
+                    items: items,
+                    created: new Date(roadmap.created_at).getTime(),
+                    lastModified: new Date(roadmap.updated_at).getTime()
+                };
+            }
+
+            console.log('Final roadmaps object:', roadmaps);
             return roadmaps;
         } catch (error) {
-            console.error('Error loading from Firebase:', error);
-            alert('Error loading roadmaps from database. Please check your connection.');
+            console.error('Error loading from SQLite:', error);
+            alert('Error loading roadmaps from database.');
             return {};
         }
     } else {
-        // Fallback to localStorage
-        const roadmapsData = localStorage.getItem('allRoadmaps');
-        return roadmapsData ? JSON.parse(roadmapsData) : {};
+        console.error('Database not initialized');
+        alert('Database not initialized. Please refresh the page.');
+        return {};
     }
 }
 
-// Save all roadmaps
+// Save all roadmaps (deprecated - kept for compatibility)
 async function saveRoadmaps(roadmaps) {
-    if (useFirebase) {
-        // Save to Firebase - we'll update individual documents
-        // This function is less used now as we update documents directly
-        for (const [id, roadmap] of Object.entries(roadmaps)) {
-            await db.collection('roadmaps').doc(id).set(roadmap);
-        }
-    } else {
-        // Fallback to localStorage
-        localStorage.setItem('allRoadmaps', JSON.stringify(roadmaps));
-    }
+    // SQLite uses individual save operations, not bulk saves
+    console.log('saveRoadmaps is deprecated with SQLite');
 }
 
 // Get current roadmap ID from URL or localStorage
@@ -118,31 +127,51 @@ async function createNewRoadmap() {
             return;
         }
 
-        const id = Date.now().toString();
-        const roadmapData = {
-            name: name.trim(),
-            items: [],
-            created: Date.now(),
-            lastModified: Date.now()
-        };
+        try {
+            const roadmap = await roadmapDB.createRoadmap(name.trim());
+            setCurrentRoadmapId(roadmap.id);
+            window.location.href = `index.html?id=${roadmap.id}`;
+        } catch (error) {
+            console.error('Error creating roadmap:', error);
+            alert('Error creating roadmap. Please try again.');
+        }
+    });
+}
 
-        if (useFirebase) {
-            try {
-                await db.collection('roadmaps').doc(id).set(roadmapData);
-            } catch (error) {
-                console.error('Error saving to Firebase:', error);
-                alert('Error creating roadmap. Please try again.');
-                return;
-            }
-        } else {
-            const roadmaps = await loadRoadmaps();
-            roadmaps[id] = roadmapData;
-            await saveRoadmaps(roadmaps);
+// Import database
+async function importDatabase() {
+    if (!roadmapDB.db || !roadmapDB.SQL) {
+        alert('Database system not ready. Please wait a moment and try again.');
+        return;
+    }
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.sqlite,.db';
+
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!confirm('Importing will replace your current database. Continue?')) {
+            return;
         }
 
-        setCurrentRoadmapId(id);
-        window.location.href = `index.html?id=${id}`;
-    });
+        try {
+            await roadmapDB.importFromFile(file);
+
+            const stats = await roadmapDB.getStats();
+            alert(`Database imported successfully!\nRoadmaps: ${stats.roadmaps}\nItems: ${stats.items}`);
+
+            // Refresh the roadmaps list
+            await renderRoadmapsList();
+        } catch (error) {
+            console.error('Error importing database:', error);
+            alert('Error importing database: ' + error.message);
+        }
+    };
+
+    input.click();
 }
 
 // Open existing roadmap
@@ -164,26 +193,13 @@ async function renameRoadmap(id) {
             return;
         }
 
-        roadmap.name = newName.trim();
-        roadmap.lastModified = Date.now();
-
-        if (useFirebase) {
-            try {
-                await db.collection('roadmaps').doc(id).update({
-                    name: roadmap.name,
-                    lastModified: roadmap.lastModified
-                });
-            } catch (error) {
-                console.error('Error updating Firebase:', error);
-                alert('Error renaming roadmap. Please try again.');
-                return;
-            }
-        } else {
-            roadmaps[id] = roadmap;
-            await saveRoadmaps(roadmaps);
+        try {
+            await roadmapDB.updateRoadmap(id, newName.trim());
+            await renderRoadmapsList();
+        } catch (error) {
+            console.error('Error renaming roadmap:', error);
+            alert('Error renaming roadmap. Please try again.');
         }
-
-        await renderRoadmapsList();
     });
 }
 
@@ -195,25 +211,19 @@ async function deleteRoadmap(id) {
     if (!roadmap) return;
 
     if (confirm(`Are you sure you want to delete "${roadmap.name}"? This cannot be undone.`)) {
-        if (useFirebase) {
-            try {
-                await db.collection('roadmaps').doc(id).delete();
-            } catch (error) {
-                console.error('Error deleting from Firebase:', error);
-                alert('Error deleting roadmap. Please try again.');
-                return;
+        try {
+            await roadmapDB.deleteRoadmap(id);
+
+            // Clear current roadmap if it's the one being deleted
+            if (getCurrentRoadmapId() === id) {
+                localStorage.removeItem('currentRoadmapId');
             }
-        } else {
-            delete roadmaps[id];
-            await saveRoadmaps(roadmaps);
-        }
 
-        // Clear current roadmap if it's the one being deleted
-        if (getCurrentRoadmapId() === id) {
-            localStorage.removeItem('currentRoadmapId');
+            await renderRoadmapsList();
+        } catch (error) {
+            console.error('Error deleting roadmap:', error);
+            alert('Error deleting roadmap. Please try again.');
         }
-
-        await renderRoadmapsList();
     }
 }
 
@@ -258,11 +268,26 @@ function escapeHtml(text) {
 }
 
 // Initialize
-document.addEventListener('DOMContentLoaded', () => {
-    renderRoadmapsList();
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('DOMContentLoaded - starting initialization');
+    console.log('roadmapDB available:', typeof roadmapDB !== 'undefined');
+
+    // Initialize SQLite database
+    const initialized = await roadmapDB.initialize();
+    console.log('Database initialized:', initialized);
+
+    if (!initialized) {
+        alert('Failed to initialize database. Please refresh the page.');
+        return;
+    }
+
+    // Render roadmaps list
+    await renderRoadmapsList();
+    console.log('Roadmaps list rendered');
 
     // Event listeners
     document.getElementById('createNewBtn').addEventListener('click', createNewRoadmap);
+    document.getElementById('importDbBtn').addEventListener('click', importDatabase);
     document.getElementById('modalSave').addEventListener('click', saveModal);
     document.getElementById('modalCancel').addEventListener('click', hideModal);
 

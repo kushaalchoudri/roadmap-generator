@@ -7,6 +7,7 @@ let draggedItem = null;
 let dragStartX = 0;
 let dragType = null; // 'move', 'resize-start', 'resize-end'
 let workstreamOrder = {}; // Track custom workstream order
+let timelineExtensionDays = 0; // Extra days to extend timeline beyond last activity
 
 // Check if Firebase is initialized
 const useFirebase = typeof firebase !== 'undefined' && typeof db !== 'undefined';
@@ -91,6 +92,19 @@ async function saveCurrentRoadmap() {
     // Try SQLite first
     if (roadmapDB.db) {
         try {
+            // Ensure roadmap record exists in database
+            const existingRoadmap = await roadmapDB.getRoadmap(currentRoadmapId);
+            if (!existingRoadmap) {
+                // Create roadmap record if it doesn't exist
+                console.log('Creating roadmap record for ID:', currentRoadmapId);
+                const roadmapName = document.getElementById('currentRoadmapName')?.textContent || 'Unnamed Roadmap';
+                const now = new Date().toISOString();
+                roadmapDB.db.run(
+                    'INSERT INTO roadmaps (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)',
+                    [currentRoadmapId, roadmapName, now, now]
+                );
+            }
+
             await roadmapDB.saveItems(currentRoadmapId, roadmapItems);
             await roadmapDB.saveWorkstreamOrder(currentRoadmapId, workstreamOrder);
             console.log('Saved to SQLite');
@@ -217,6 +231,12 @@ async function initApp() {
         }
     }
 
+    // Load timeline extension from sessionStorage
+    const savedExtension = sessionStorage.getItem('timelineExtensionDays');
+    if (savedExtension) {
+        timelineExtensionDays = parseInt(savedExtension) || 0;
+    }
+
     // Load current roadmap
     const roadmap = await loadCurrentRoadmap();
     if (!roadmap) {
@@ -237,6 +257,7 @@ async function initApp() {
     const timelineCanvas = document.getElementById('timeline');
     const exportDbBtn = document.getElementById('exportDbBtn');
     const importDbBtn = document.getElementById('importDbBtn');
+    const resetTimelineBtn = document.getElementById('resetTimelineBtn');
 
     // View toggle buttons
     const viewWeekBtn = document.getElementById('viewWeekBtn');
@@ -297,12 +318,19 @@ async function initApp() {
     // Export database button
     if (exportDbBtn) {
         exportDbBtn.addEventListener('click', async () => {
+            // Check if database is initialized
+            if (!roadmapDB.db || !roadmapDB.SQL) {
+                alert('Database system not ready. Please wait a moment and try again.');
+                console.error('SQLite not initialized');
+                return;
+            }
+
             try {
                 await roadmapDB.exportToFile();
                 alert('Database exported successfully!');
             } catch (error) {
                 console.error('Error exporting database:', error);
-                alert('Error exporting database. Please try again.');
+                alert('Error exporting database: ' + error.message);
             }
         });
     }
@@ -310,6 +338,13 @@ async function initApp() {
     // Import database button
     if (importDbBtn) {
         importDbBtn.addEventListener('click', async () => {
+            // Check if database is initialized
+            if (!roadmapDB.db || !roadmapDB.SQL) {
+                alert('Database system not ready. Please wait a moment and try again.');
+                console.error('SQLite not initialized');
+                return;
+            }
+
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = '.sqlite,.db';
@@ -323,16 +358,35 @@ async function initApp() {
                 }
 
                 try {
+                    console.log('Importing file:', file.name, 'Size:', file.size, 'bytes');
                     await roadmapDB.importFromFile(file);
-                    alert('Database imported successfully! Reloading...');
-                    window.location.reload();
+
+                    // Verify import worked
+                    const stats = await roadmapDB.getStats();
+                    console.log('Import complete. Database stats:', stats);
+
+                    const roadmaps = await roadmapDB.getAllRoadmaps();
+                    console.log('Roadmaps after import:', roadmaps);
+
+                    alert(`Database imported successfully!\nRoadmaps: ${stats.roadmaps}\nItems: ${stats.items}\n\nRedirecting to home...`);
+                    // Redirect to home to see list of imported roadmaps
+                    window.location.href = 'home.html';
                 } catch (error) {
                     console.error('Error importing database:', error);
-                    alert('Error importing database. Please ensure it is a valid SQLite file.');
+                    alert('Error importing database: ' + error.message + '\nPlease ensure it is a valid SQLite file.');
                 }
             };
 
             input.click();
+        });
+    }
+
+    // Reset timeline width button
+    if (resetTimelineBtn) {
+        resetTimelineBtn.addEventListener('click', () => {
+            timelineExtensionDays = 0;
+            sessionStorage.removeItem('timelineExtensionDays');
+            renderTimeline();
         });
     }
 
@@ -753,6 +807,13 @@ async function initApp() {
         const minDate = new Date(Math.min(...allDates));
         const maxDate = new Date(Math.max(...allDates));
 
+        // Add timelineExtensionDays if user has expanded horizontally
+        if (timelineExtensionDays > 0) {
+            maxDate.setDate(maxDate.getDate() + timelineExtensionDays);
+        }
+
+        console.log('Original date range:', minDate.toISOString(), 'to', maxDate.toISOString());
+
         // Add padding based on view
         if (currentView === 'week') {
             // Week view - find Monday of the week containing minDate
@@ -760,22 +821,25 @@ async function initApp() {
             const daysToMonday = minDay === 0 ? 6 : minDay - 1; // Sunday is 0, we want Monday
             minDate.setDate(minDate.getDate() - daysToMonday);
 
-            // Find Sunday of the week containing maxDate
+            // Find Sunday of the week containing maxDate, then add one more week for padding
             const maxDay = maxDate.getDay();
             const daysToSunday = maxDay === 0 ? 0 : 7 - maxDay;
-            maxDate.setDate(maxDate.getDate() + daysToSunday);
+            maxDate.setDate(maxDate.getDate() + daysToSunday + 7); // Add extra week
         } else if (currentView === 'year') {
             minDate.setMonth(0, 1);
+            maxDate.setFullYear(maxDate.getFullYear() + 1); // Add one more year for padding
             maxDate.setMonth(11, 31);
         } else if (currentView === 'quarter') {
             const startQuarter = Math.floor(minDate.getMonth() / 3) * 3;
             minDate.setMonth(startQuarter, 1);
             const endQuarter = Math.floor(maxDate.getMonth() / 3) * 3 + 2;
-            maxDate.setMonth(endQuarter + 1, 0);
+            maxDate.setMonth(endQuarter + 3 + 1, 0); // Add one more quarter for padding
         } else { // month view
             minDate.setDate(1);
-            maxDate.setMonth(maxDate.getMonth() + 1, 0);
+            maxDate.setMonth(maxDate.getMonth() + 2, 0); // Add one more month for padding
         }
+
+        console.log('Padded date range:', minDate.toISOString(), 'to', maxDate.toISOString());
 
         // Generate time periods based on view
         const periods = [];
@@ -792,7 +856,7 @@ async function initApp() {
                 periods.push({
                     label: `W${weekNum} ${monthYear}`,
                     start: new Date(currentWeekStart),
-                    end: weekEnd > maxDate ? maxDate : weekEnd,
+                    end: weekEnd,
                     days: 7,
                     weekNumber: weekNum
                 });
@@ -924,12 +988,12 @@ async function initApp() {
         let html = '<div class="timeline-content" style="width: ' + contentWidth + 'px;">';
 
         // Start bordered container that includes months and workstreams
-        html += `<div class="timeline-bordered-container" style="border: 3px solid #3b82f6; border-radius: 8px; display: inline-block;">`;
+        html += `<div class="timeline-bordered-container" style="border: 3px solid #3b82f6; border-radius: 8px; display: inline-block; overflow: hidden;">`;
 
         // Period headers
-        html += '<div class="timeline-header-row">';
+        html += '<div class="timeline-header-row" style="display: flex;">';
         html += '<div class="timeline-left-spacer"></div>';
-        html += '<div class="timeline-months-wrapper" style="width: ' + timelineWidth + 'px;"><div class="timeline-months">';
+        html += '<div class="timeline-months-wrapper" style="width: ' + timelineWidth + 'px; overflow: hidden;"><div class="timeline-months">';
 
         periods.forEach(period => {
             const width = period.days * pixelsPerDay;
@@ -965,7 +1029,7 @@ async function initApp() {
         html += '</div></div></div>';
 
         // General milestones section and workstreams
-        html += `<div class="timeline-grid" style="position: relative; width: ${timelineWidth}px; min-width: ${timelineWidth}px;">`;
+        html += `<div class="timeline-grid" style="position: relative;">`;
 
         // Add vertical lines and today marker - GLOBAL container spanning entire timeline
         let gridLinesHtml = '';
@@ -1036,7 +1100,7 @@ async function initApp() {
         if (generalMilestones.length > 0) {
             html += `<div class="timeline-workstream" data-workstream-name="Milestones">`;
             html += `<div class="workstream-header milestones">Milestones</div>`;
-            html += `<div class="workstream-rows" style="min-height: 65px; position: relative; width: ${timelineWidth}px; min-width: ${timelineWidth}px;">`;
+            html += `<div class="workstream-rows" style="min-height: 65px; position: relative;">`;
             // Gridlines are now in global container, not here
 
             generalMilestones.forEach(item => {
@@ -1055,7 +1119,6 @@ async function initApp() {
 
             html += `</div>`;
             html += `<div class="workstream-resize-handle-vertical" title="Drag to resize height"></div>`;
-            html += `<div class="workstream-resize-handle-horizontal" title="Drag to resize width"></div>`;
             html += `</div>`;
         }
 
@@ -1081,7 +1144,7 @@ async function initApp() {
                     <button class="workstream-move-btn" onclick="moveWorkstream('${escapeHtml(workstreamName)}', 'down')" title="Move down" ${index === sortedWorkstreamNames.length - 1 ? 'disabled' : ''}>▼</button>
                 </div>
             </div>`;
-            html += `<div class="workstream-rows" style="position: relative; width: ${timelineWidth}px; min-width: ${timelineWidth}px;">`;
+            html += `<div class="workstream-rows" style="position: relative;">`;
             // Gridlines are now in global container, not here
 
             // Render milestones
@@ -1189,22 +1252,22 @@ async function initApp() {
             const minHeight = Math.max(milestoneHeight + totalActivityHeight + barHeight + labelAboveHeight + 20, 100); // Increased padding
 
             html += `</div>`;
-            // Add resize handles (vertical and horizontal)
+            // Add resize handle (vertical only for workstreams)
             html += `<div class="workstream-resize-handle-vertical" title="Drag to resize height"></div>`;
-            html += `<div class="workstream-resize-handle-horizontal" title="Drag to resize width"></div>`;
             html += `</div>`;
 
             // Replace the workstream-rows div to add calculated min-height
-            const searchStr = `<div class="workstream-rows" style="position: relative; min-width: ${contentWidth - 200}px;">`;
+            const searchStr = `<div class="workstream-rows" style="position: relative;">`;
             const lastIndex = html.lastIndexOf(searchStr);
             if (lastIndex !== -1) {
                 html = html.substring(0, lastIndex) +
-                       `<div class="workstream-rows" style="position: relative; width: ${timelineWidth}px; min-width: ${timelineWidth}px; min-height: ${minHeight}px;">` +
+                       `<div class="workstream-rows" style="position: relative; min-height: ${minHeight}px;">` +
                        html.substring(lastIndex + searchStr.length);
             }
         });
 
         html += '</div>'; // Close timeline-grid
+        html += '<div class="timeline-border-resize-handle" title="Drag to extend timeline"></div>'; // Add horizontal resize handle to border
         html += '</div>'; // Close timeline-bordered-container
         html += '</div>'; // Close timeline-content
         timelineCanvas.innerHTML = html;
@@ -1449,46 +1512,54 @@ async function initApp() {
         });
 
         // Horizontal resize handles
-        const horizontalHandles = document.querySelectorAll('.workstream-resize-handle-horizontal');
+        const horizontalHandles = document.querySelectorAll('.timeline-border-resize-handle');
 
         horizontalHandles.forEach(handle => {
-            const workstreamDiv = handle.parentElement;
-            const workstreamRows = workstreamDiv.querySelector('.workstream-rows');
-            const workstreamName = workstreamDiv.getAttribute('data-workstream-name');
-
-            if (!workstreamRows) return;
-
             handle.addEventListener('mousedown', (e) => {
                 e.preventDefault();
                 const startX = e.clientX;
-                const startWidth = workstreamRows.offsetWidth;
+                const startExtension = timelineExtensionDays;
+                let lastUpdateTime = 0;
 
                 const onMouseMove = (e) => {
                     const deltaX = e.clientX - startX;
-                    const newWidth = Math.max(200, startWidth + deltaX); // Minimum 200px
-                    workstreamRows.style.width = newWidth + 'px';
-                    workstreamRows.style.minWidth = newWidth + 'px';
+
+                    // Calculate how many extra days this represents
+                    const pixelsPerDay = currentView === 'week' ? 15 :
+                                        currentView === 'month' ? 3 :
+                                        currentView === 'quarter' ? 2 : 1;
+
+                    const extraDays = Math.ceil(deltaX / pixelsPerDay);
+
+                    // Update extension days
+                    if (extraDays > 0) {
+                        timelineExtensionDays = startExtension + extraDays;
+                    } else {
+                        timelineExtensionDays = Math.max(0, startExtension + extraDays);
+                    }
+
+                    // Throttle timeline regeneration (max once per 200ms)
+                    const now = Date.now();
+                    if (now - lastUpdateTime > 200) {
+                        lastUpdateTime = now;
+                        console.log('Extending timeline by', timelineExtensionDays, 'days');
+                        renderTimeline();
+                    }
                 };
 
                 const onMouseUp = () => {
                     document.removeEventListener('mousemove', onMouseMove);
                     document.removeEventListener('mouseup', onMouseUp);
 
-                    // Save the width to sessionStorage
-                    const finalWidth = workstreamRows.offsetWidth;
-                    sessionStorage.setItem(`workstream-width-${workstreamName}`, finalWidth);
+                    // Final timeline regeneration and save
+                    sessionStorage.setItem('timelineExtensionDays', timelineExtensionDays);
+                    console.log('Timeline extension saved:', timelineExtensionDays, 'days');
+                    renderTimeline();
                 };
 
                 document.addEventListener('mousemove', onMouseMove);
                 document.addEventListener('mouseup', onMouseUp);
             });
-
-            // Restore saved width
-            const savedWidth = sessionStorage.getItem(`workstream-width-${workstreamName}`);
-            if (savedWidth) {
-                workstreamRows.style.width = savedWidth + 'px';
-                workstreamRows.style.minWidth = savedWidth + 'px';
-            }
         });
     }
 }

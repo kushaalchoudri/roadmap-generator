@@ -6,14 +6,20 @@
     <title>Project Roadmap Generator - Home</title>
     <link rel="stylesheet" href="styles.css">
 
-    <!-- Firebase SDK -->
+    <!-- SQLite for browser (SQL.js) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+
+    <!-- Database layer -->
+    <script src="db.js"></script>
+
+    <!-- Firebase SDK (optional fallback) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <!-- Firebase config initialization - defaults to localStorage if not configured -->
+    <!-- Firebase config initialization - defaults to SQLite/localStorage if not configured -->
     <script>
         // Initialize Firebase if config is available (optional)
-        // Without firebase-config.js, the app uses localStorage
-        console.log('Using localStorage for data storage (Firebase not configured)');
+        // Without firebase-config.js, the app uses SQLite/localStorage
+        console.log('Using SQLite for data storage');
     </script>
 </head>
 <body>
@@ -26,12 +32,20 @@
         <div class="home-section">
             <div class="home-header">
                 <h2>Your Roadmaps</h2>
-                <button id="createNewBtn" class="btn btn-primary">
-                    <svg style="width: 16px; height: 16px; display: inline-block; margin-right: 5px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                    </svg>
-                    Create New Roadmap
-                </button>
+                <div style="display: flex; gap: 10px;">
+                    <button id="importDbBtn" class="btn btn-secondary">
+                        <svg style="width: 16px; height: 16px; display: inline-block; margin-right: 5px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                        </svg>
+                        Import Database
+                    </button>
+                    <button id="createNewBtn" class="btn btn-primary">
+                        <svg style="width: 16px; height: 16px; display: inline-block; margin-right: 5px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        Create New Roadmap
+                    </button>
+                </div>
             </div>
 
             <div id="roadmapsList" class="roadmaps-list"></div>
