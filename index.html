@@ -6,14 +6,20 @@
     <title>Project Roadmap Generator</title>
     <link rel="stylesheet" href="styles.css">
 
-    <!-- Firebase SDK -->
+    <!-- SQLite for browser (SQL.js) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+
+    <!-- Database layer -->
+    <script src="db.js"></script>
+
+    <!-- Firebase SDK (optional fallback) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <!-- Firebase config initialization - defaults to localStorage if not configured -->
+    <!-- Firebase config initialization - defaults to SQLite/localStorage if not configured -->
     <script>
         // Initialize Firebase if config is available (optional)
-        // Without firebase-config.js, the app uses localStorage
-        console.log('Using localStorage for data storage (Firebase not configured)');
+        // Without firebase-config.js, the app uses SQLite/localStorage
+        console.log('Using SQLite for data storage');
     </script>
 </head>
 <body>
@@ -100,6 +106,8 @@
                     </div>
                 </div>
                 <div class="timeline-controls">
+                    <button id="exportDbBtn" class="btn btn-secondary">Export Database</button>
+                    <button id="importDbBtn" class="btn btn-secondary">Import Database</button>
                     <button id="downloadBtn" class="btn btn-secondary">Download as Image</button>
                     <button id="clearBtn" class="btn btn-danger">Clear All</button>
                 </div>
@@ -108,6 +116,6 @@
         </div>
     </div>
 
-    <script src="script.js?v=2.10.1"></script>
+    <script src="script.js?v=1774607309"></script>
 </body>
 </html>

@@ -51,6 +51,22 @@ async function saveAllRoadmaps(roadmaps) {
 
 // Load current roadmap data
 async function loadCurrentRoadmap() {
+    // Try SQLite first
+    if (roadmapDB.db) {
+        try {
+            const roadmap = await roadmapDB.getRoadmap(currentRoadmapId);
+            if (roadmap) {
+                roadmapItems = await roadmapDB.getRoadmapItems(currentRoadmapId);
+                workstreamOrder = await roadmapDB.getWorkstreamOrder(currentRoadmapId);
+                console.log('Loaded roadmap from SQLite:', roadmap.name, roadmapItems.length, 'items');
+                return roadmap;
+            }
+        } catch (error) {
+            console.error('Error loading from SQLite:', error);
+        }
+    }
+
+    // Fallback to localStorage/Firebase
     const roadmaps = await loadAllRoadmaps();
     console.log('All roadmaps loaded:', roadmaps);
     console.log('Current roadmap ID:', currentRoadmapId);
@@ -72,6 +88,20 @@ async function saveCurrentRoadmap() {
 
     console.log('Saving roadmap, items count:', roadmapItems.length);
 
+    // Try SQLite first
+    if (roadmapDB.db) {
+        try {
+            await roadmapDB.saveItems(currentRoadmapId, roadmapItems);
+            await roadmapDB.saveWorkstreamOrder(currentRoadmapId, workstreamOrder);
+            console.log('Saved to SQLite');
+            return;
+        } catch (error) {
+            console.error('Error saving to SQLite:', error);
+            // Fall through to localStorage/Firebase
+        }
+    }
+
+    // Fallback to Firebase/localStorage
     if (useFirebase) {
         try {
             await db.collection('roadmaps').doc(currentRoadmapId).update({
@@ -149,6 +179,21 @@ async function initApp() {
     // Prevent double initialization
     if (appInitialized) return;
 
+    // Initialize SQLite database
+    try {
+        const dbInitialized = await roadmapDB.initialize();
+        if (dbInitialized) {
+            console.log('SQLite database initialized successfully');
+            const stats = await roadmapDB.getStats();
+            console.log('Database stats:', stats);
+        } else {
+            console.warn('SQLite initialization failed, using localStorage fallback');
+        }
+    } catch (error) {
+        console.error('Error initializing SQLite:', error);
+        console.warn('Using localStorage fallback');
+    }
+
     // Check if we have a roadmap ID
     currentRoadmapId = getRoadmapIdFromUrl();
 
@@ -190,6 +235,8 @@ async function initApp() {
     const downloadBtn = document.getElementById('downloadBtn');
     const clearBtn = document.getElementById('clearBtn');
     const timelineCanvas = document.getElementById('timeline');
+    const exportDbBtn = document.getElementById('exportDbBtn');
+    const importDbBtn = document.getElementById('importDbBtn');
 
     // View toggle buttons
     const viewWeekBtn = document.getElementById('viewWeekBtn');
@@ -247,6 +294,48 @@ async function initApp() {
         }
     });
 
+    // Export database button
+    if (exportDbBtn) {
+        exportDbBtn.addEventListener('click', async () => {
+            try {
+                await roadmapDB.exportToFile();
+                alert('Database exported successfully!');
+            } catch (error) {
+                console.error('Error exporting database:', error);
+                alert('Error exporting database. Please try again.');
+            }
+        });
+    }
+
+    // Import database button
+    if (importDbBtn) {
+        importDbBtn.addEventListener('click', async () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.sqlite,.db';
+
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                if (!confirm('Importing will replace your current database. Continue?')) {
+                    return;
+                }
+
+                try {
+                    await roadmapDB.importFromFile(file);
+                    alert('Database imported successfully! Reloading...');
+                    window.location.reload();
+                } catch (error) {
+                    console.error('Error importing database:', error);
+                    alert('Error importing database. Please ensure it is a valid SQLite file.');
+                }
+            };
+
+            input.click();
+        });
+    }
+
     // View toggle buttons with null checks
     console.log('View buttons:', viewWeekBtn, viewMonthBtn, viewQuarterBtn, viewYearBtn);
 
@@ -297,10 +386,16 @@ async function initApp() {
             return;
         }
 
+        // Show user instruction for best quality
+        if (!confirm('For best quality:\n1. The timeline will expand to full size\n2. Click OK to capture\n3. Wait a few seconds for processing\n\nContinue?')) {
+            return;
+        }
+
         try {
-            if (typeof html2canvas === 'undefined') {
+            // Try dom-to-image library first (better CSS support)
+            if (typeof domtoimage === 'undefined') {
                 const script = document.createElement('script');
-                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js';
                 script.onload = () => captureTimeline();
                 document.head.appendChild(script);
             } else {
@@ -312,7 +407,7 @@ async function initApp() {
         }
     });
 
-    // Capture timeline as image
+    // Capture timeline as image using dom-to-image (better CSS support than html2canvas)
     function captureTimeline() {
         const timelineSection = document.querySelector('.timeline-section');
         const timelineContent = timelineCanvas.querySelector('.timeline-content');
@@ -337,34 +432,29 @@ async function initApp() {
         timelineCanvas.style.maxHeight = 'none';
         timelineCanvas.style.height = 'auto';
 
-        html2canvas(timelineCanvas, {
-            backgroundColor: '#ffffff',
-            scale: 2,
-            width: fullWidth + 50, // Add padding
+        // Use dom-to-image which preserves CSS better
+        domtoimage.toPng(timelineCanvas, {
+            width: fullWidth + 50,
             height: fullHeight + 50,
-            windowWidth: fullWidth + 50,
-            windowHeight: fullHeight + 50,
-            scrollX: 0,
-            scrollY: 0,
-            useCORS: true,
-            allowTaint: true
-        }).then(canvas => {
+            style: {
+                transform: 'scale(1)',
+                transformOrigin: 'top left'
+            },
+            quality: 1.0
+        }).then(function (dataUrl) {
             // Restore original styles
             timelineCanvas.style.overflow = originalStyles.overflow;
             timelineCanvas.style.maxHeight = originalStyles.maxHeight;
             timelineCanvas.style.height = originalStyles.height;
 
-            canvas.toBlob((blob) => {
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `${roadmap.name}-roadmap-${new Date().toISOString().split('T')[0]}.png`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            });
-        }).catch(error => {
+            // Download the image
+            const a = document.createElement('a');
+            a.href = dataUrl;
+            a.download = `${roadmap.name}-roadmap-${new Date().toISOString().split('T')[0]}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }).catch(function (error) {
             // Restore original styles on error
             timelineCanvas.style.overflow = originalStyles.overflow;
             timelineCanvas.style.maxHeight = originalStyles.maxHeight;
@@ -833,10 +923,13 @@ async function initApp() {
         const contentWidth = Math.max(timelineWidth + 400, 1200);
         let html = '<div class="timeline-content" style="width: ' + contentWidth + 'px;">';
 
+        // Start bordered container that includes months and workstreams
+        html += `<div class="timeline-bordered-container" style="border: 3px solid #3b82f6; border-radius: 8px; display: inline-block;">`;
+
         // Period headers
         html += '<div class="timeline-header-row">';
         html += '<div class="timeline-left-spacer"></div>';
-        html += '<div class="timeline-months-wrapper"><div class="timeline-months">';
+        html += '<div class="timeline-months-wrapper" style="width: ' + timelineWidth + 'px;"><div class="timeline-months">';
 
         periods.forEach(period => {
             const width = period.days * pixelsPerDay;
@@ -868,18 +961,11 @@ async function initApp() {
             html += `</div>`;
         });
 
-        // Add padding div to extend the month headers to match content width
-        const extraPadding = contentWidth - 200 - timelineWidth; // Content width - left spacer - timeline width
-        if (extraPadding > 0) {
-            html += `<div class="timeline-month" style="width: ${extraPadding}px; min-width: ${extraPadding}px; border-left: 1px solid #d1d5db;">
-                <div class="timeline-month-header" style="opacity: 0.5;">...</div>
-            </div>`;
-        }
-
+        // Don't add extra padding - keep month headers aligned with timeline
         html += '</div></div></div>';
 
         // General milestones section and workstreams
-        html += `<div class="timeline-grid" style="position: relative; min-width: ${contentWidth - 200}px;">`;
+        html += `<div class="timeline-grid" style="position: relative; width: ${timelineWidth}px; min-width: ${timelineWidth}px;">`;
 
         // Add vertical lines and today marker - GLOBAL container spanning entire timeline
         let gridLinesHtml = '';
@@ -950,7 +1036,7 @@ async function initApp() {
         if (generalMilestones.length > 0) {
             html += `<div class="timeline-workstream" data-workstream-name="Milestones">`;
             html += `<div class="workstream-header milestones">Milestones</div>`;
-            html += `<div class="workstream-rows" style="min-height: 65px; position: relative; min-width: ${contentWidth - 200}px;">`;
+            html += `<div class="workstream-rows" style="min-height: 65px; position: relative; width: ${timelineWidth}px; min-width: ${timelineWidth}px;">`;
             // Gridlines are now in global container, not here
 
             generalMilestones.forEach(item => {
@@ -968,7 +1054,8 @@ async function initApp() {
             });
 
             html += `</div>`;
-            html += `<div class="workstream-resize-handle" title="Drag to resize height"></div>`;
+            html += `<div class="workstream-resize-handle-vertical" title="Drag to resize height"></div>`;
+            html += `<div class="workstream-resize-handle-horizontal" title="Drag to resize width"></div>`;
             html += `</div>`;
         }
 
@@ -994,7 +1081,7 @@ async function initApp() {
                     <button class="workstream-move-btn" onclick="moveWorkstream('${escapeHtml(workstreamName)}', 'down')" title="Move down" ${index === sortedWorkstreamNames.length - 1 ? 'disabled' : ''}>▼</button>
                 </div>
             </div>`;
-            html += `<div class="workstream-rows" style="position: relative; min-width: ${contentWidth - 200}px;">`;
+            html += `<div class="workstream-rows" style="position: relative; width: ${timelineWidth}px; min-width: ${timelineWidth}px;">`;
             // Gridlines are now in global container, not here
 
             // Render milestones
@@ -1070,10 +1157,14 @@ async function initApp() {
                 const startDateStr = formatDateShort(item.startDate);
                 const endDateStr = formatDateShort(item.endDate);
 
-                // Determine if label should be inside or above the bar
-                // If bar is wide enough (>80px), put label inside
-                const labelInside = width > 80;
-                const labelClass = labelInside ? 'timeline-bar-label' : 'timeline-bar-label-above';
+                // Status colors for the line
+                const lineColors = {
+                    'not-started': '#9ca3af',
+                    'in-progress': '#10b981',
+                    'at-risk': '#ef4444',
+                    'completed': '#3b82f6'
+                };
+                const lineColor = lineColors[status] || '#9ca3af';
 
                 html += `
                     <div class="timeline-bar"
@@ -1081,8 +1172,8 @@ async function initApp() {
                          style="left: ${left}px; width: ${width}px; top: ${top}px; z-index: 3;"
                          title="${escapeHtml(item.name)}\n${startDateStr} - ${endDateStr}">
                         <div class="timeline-bar-drag-handle-start"></div>
-                        <div class="timeline-bar-shape ${status}"></div>
-                        <div class="${labelClass}">${escapeHtml(item.name)}</div>
+                        <div class="timeline-bar-line ${status}" style="background: ${lineColor};"></div>
+                        <div class="timeline-bar-description">${escapeHtml(item.name)}</div>
                         <div class="timeline-bar-start-date">${startDateStr}</div>
                         <div class="timeline-bar-end-date">${endDateStr}</div>
                         <div class="timeline-bar-drag-handle-end"></div>
@@ -1098,8 +1189,9 @@ async function initApp() {
             const minHeight = Math.max(milestoneHeight + totalActivityHeight + barHeight + labelAboveHeight + 20, 100); // Increased padding
 
             html += `</div>`;
-            // Add resize handle
-            html += `<div class="workstream-resize-handle" title="Drag to resize height"></div>`;
+            // Add resize handles (vertical and horizontal)
+            html += `<div class="workstream-resize-handle-vertical" title="Drag to resize height"></div>`;
+            html += `<div class="workstream-resize-handle-horizontal" title="Drag to resize width"></div>`;
             html += `</div>`;
 
             // Replace the workstream-rows div to add calculated min-height
@@ -1107,12 +1199,14 @@ async function initApp() {
             const lastIndex = html.lastIndexOf(searchStr);
             if (lastIndex !== -1) {
                 html = html.substring(0, lastIndex) +
-                       `<div class="workstream-rows" style="position: relative; min-width: ${contentWidth - 200}px; min-height: ${minHeight}px;">` +
+                       `<div class="workstream-rows" style="position: relative; width: ${timelineWidth}px; min-width: ${timelineWidth}px; min-height: ${minHeight}px;">` +
                        html.substring(lastIndex + searchStr.length);
             }
         });
 
-        html += '</div></div>';
+        html += '</div>'; // Close timeline-grid
+        html += '</div>'; // Close timeline-bordered-container
+        html += '</div>'; // Close timeline-content
         timelineCanvas.innerHTML = html;
 
         // Add drag-and-drop functionality
@@ -1311,9 +1405,10 @@ async function initApp() {
 
     // Initialize workstream resize functionality
     function initWorkstreamResize() {
-        const resizeHandles = document.querySelectorAll('.workstream-resize-handle');
+        // Vertical resize handles
+        const verticalHandles = document.querySelectorAll('.workstream-resize-handle-vertical');
 
-        resizeHandles.forEach(handle => {
+        verticalHandles.forEach(handle => {
             const workstreamDiv = handle.parentElement;
             const workstreamRows = workstreamDiv.querySelector('.workstream-rows');
             const workstreamName = workstreamDiv.getAttribute('data-workstream-name');
@@ -1350,6 +1445,49 @@ async function initApp() {
             if (savedHeight) {
                 workstreamRows.style.height = savedHeight + 'px';
                 workstreamRows.style.minHeight = savedHeight + 'px';
+            }
+        });
+
+        // Horizontal resize handles
+        const horizontalHandles = document.querySelectorAll('.workstream-resize-handle-horizontal');
+
+        horizontalHandles.forEach(handle => {
+            const workstreamDiv = handle.parentElement;
+            const workstreamRows = workstreamDiv.querySelector('.workstream-rows');
+            const workstreamName = workstreamDiv.getAttribute('data-workstream-name');
+
+            if (!workstreamRows) return;
+
+            handle.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                const startX = e.clientX;
+                const startWidth = workstreamRows.offsetWidth;
+
+                const onMouseMove = (e) => {
+                    const deltaX = e.clientX - startX;
+                    const newWidth = Math.max(200, startWidth + deltaX); // Minimum 200px
+                    workstreamRows.style.width = newWidth + 'px';
+                    workstreamRows.style.minWidth = newWidth + 'px';
+                };
+
+                const onMouseUp = () => {
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+
+                    // Save the width to sessionStorage
+                    const finalWidth = workstreamRows.offsetWidth;
+                    sessionStorage.setItem(`workstream-width-${workstreamName}`, finalWidth);
+                };
+
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            });
+
+            // Restore saved width
+            const savedWidth = sessionStorage.getItem(`workstream-width-${workstreamName}`);
+            if (savedWidth) {
+                workstreamRows.style.width = savedWidth + 'px';
+                workstreamRows.style.minWidth = savedWidth + 'px';
             }
         });
     }
