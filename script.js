@@ -8,7 +8,7 @@ let dragStartX = 0;
 let dragType = null; // 'move', 'resize-start', 'resize-end'
 let workstreamOrder = {}; // Track custom workstream order
 let timelineExtensionDays = 0; // Extra days to extend timeline beyond last activity
-let fitToWidthMode = false; // Track if fit-to-width is enabled
+let zoomLevel = 0; // Zoom level: 0 (default), negative for zoom out, positive for zoom in
 
 // Check if Firebase is initialized
 const useFirebase = typeof firebase !== 'undefined' && typeof db !== 'undefined';
@@ -383,27 +383,37 @@ async function initApp() {
         });
     }
 
-    // Fit to Width button - adjusts timeline to fit viewport width
-    const fitToWidthBtn = document.getElementById('fitToWidthBtn');
-    if (fitToWidthBtn) {
-        fitToWidthBtn.addEventListener('click', () => {
+    // Zoom In button
+    const zoomInBtn = document.getElementById('zoomInBtn');
+    if (zoomInBtn) {
+        zoomInBtn.addEventListener('click', () => {
             if (roadmapItems.length === 0) {
                 alert('Please add some activities or milestones first');
                 return;
             }
+            zoomLevel = Math.min(zoomLevel + 1, 3); // Max zoom in level: +3
+            renderTimeline();
+        });
+    }
 
-            // Toggle fit-to-width mode
-            fitToWidthMode = !fitToWidthMode;
-
-            if (fitToWidthMode) {
-                fitToWidthBtn.textContent = 'Exit Fit to Width';
-                fitToWidthBtn.classList.add('active');
-            } else {
-                fitToWidthBtn.textContent = 'Fit to Width';
-                fitToWidthBtn.classList.remove('active');
+    // Zoom Out button
+    const zoomOutBtn = document.getElementById('zoomOutBtn');
+    if (zoomOutBtn) {
+        zoomOutBtn.addEventListener('click', () => {
+            if (roadmapItems.length === 0) {
+                alert('Please add some activities or milestones first');
+                return;
             }
+            zoomLevel = Math.max(zoomLevel - 1, -5); // Max zoom out level: -5
+            renderTimeline();
+        });
+    }
 
-            // Re-render timeline with new mode
+    // Reset Zoom button
+    const resetZoomBtn = document.getElementById('resetZoomBtn');
+    if (resetZoomBtn) {
+        resetZoomBtn.addEventListener('click', () => {
+            zoomLevel = 0;
             renderTimeline();
         });
     }
@@ -411,19 +421,14 @@ async function initApp() {
     // Reset timeline width button
     if (resetTimelineBtn) {
         resetTimelineBtn.addEventListener('click', () => {
-            // Reset zoom and extension and fit-to-width mode
+            // Reset zoom and extension
             const timelineCanvas = document.getElementById('timeline');
             if (timelineCanvas) {
                 timelineCanvas.style.zoom = '1';
                 timelineCanvas.style.width = '';
             }
 
-            fitToWidthMode = false;
-            if (fitToWidthBtn) {
-                fitToWidthBtn.textContent = 'Fit to Width';
-                fitToWidthBtn.classList.remove('active');
-            }
-
+            zoomLevel = 0;
             timelineExtensionDays = 0;
             sessionStorage.removeItem('timelineExtensionDays');
             renderTimeline();
@@ -1088,21 +1093,31 @@ async function initApp() {
             }
         });
 
-        // Calculate dimensions
+        // Calculate dimensions with zoom level
         const totalDays = Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24)) + 1;
 
         let pixelsPerDay;
-        if (fitToWidthMode) {
-            // In fit-to-width mode, 7 days should take the space of 3 days in week view
-            // Week view uses 30 pixels per day
-            const weekViewPixelsPer3Days = 30 * 3; // 3 days × 30 pixels = 90 pixels
-            pixelsPerDay = weekViewPixelsPer3Days / 7; // 90 pixels ÷ 7 days = ~12.86 pixels per day
+        let displayMode = 'days'; // 'days', 'weeks', 'months'
+
+        // Base pixels per day for each view
+        let basePixelsPerDay = currentView === 'week' ? Math.max(30, 2400 / totalDays) :
+                               currentView === 'year' ? Math.max(1, 1200 / totalDays) :
+                               currentView === 'quarter' ? Math.max(2, 1200 / totalDays) :
+                               Math.max(3, 1200 / totalDays);
+
+        // Apply zoom level
+        // Zoom level ranges from -5 (most zoomed out) to +3 (most zoomed in)
+        // Each zoom level multiplies/divides by ~1.5x
+        const zoomFactor = Math.pow(1.5, zoomLevel);
+        pixelsPerDay = basePixelsPerDay * zoomFactor;
+
+        // Determine display mode based on resulting pixels per day
+        if (pixelsPerDay < 2) {
+            displayMode = 'weeks'; // Show week numbers when very zoomed out
+        } else if (pixelsPerDay < 5 && currentView !== 'week') {
+            displayMode = 'weeks'; // Show weeks for medium zoom out
         } else {
-            // Normal mode - use existing logic
-            pixelsPerDay = currentView === 'week' ? Math.max(30, 2400 / totalDays) :  // 30+ pixels per day for week view (doubled from 15)
-                                currentView === 'year' ? Math.max(1, 1200 / totalDays) :
-                                currentView === 'quarter' ? Math.max(2, 1200 / totalDays) :
-                                Math.max(3, 1200 / totalDays);
+            displayMode = 'days'; // Show normal day-based display
         }
 
         const timelineWidth = totalDays * pixelsPerDay;
@@ -1128,14 +1143,14 @@ async function initApp() {
         html += '<div class="timeline-left-spacer"></div>';
         html += '<div class="timeline-months-wrapper" style="width: ' + timelineWidth + 'px; overflow: hidden;"><div class="timeline-months">';
 
-        if (fitToWidthMode) {
-            // In fit-to-width mode, show week numbers instead of detailed period breakdown
+        if (displayMode === 'weeks') {
+            // Show week numbers when zoomed out
             let currentWeekStart = new Date(minDate);
             while (currentWeekStart <= maxDate) {
                 const weekEnd = new Date(currentWeekStart);
                 weekEnd.setDate(weekEnd.getDate() + 6);
                 const weekNum = getWeekNumber(currentWeekStart);
-                const weekWidth = 7 * pixelsPerDay; // 7 days worth at compressed rate
+                const weekWidth = 7 * pixelsPerDay; // 7 days worth
 
                 html += `<div class="timeline-month" style="width: ${weekWidth}px; min-width: ${weekWidth}px;">`;
                 html += `<div class="timeline-month-header" style="font-size: 11px;">CW${weekNum}</div>`;
@@ -1203,8 +1218,8 @@ async function initApp() {
         // Add vertical lines and today marker - GLOBAL container spanning entire timeline
         let gridLinesHtml = '';
 
-        // In fit-to-width mode, skip weekend shading and use weekly grid lines
-        if (!fitToWidthMode) {
+        // In week display mode (zoomed out), skip weekend shading and use weekly grid lines
+        if (displayMode !== 'weeks') {
             // Add weekend shading (Saturday and Sunday) - light grey
             for (let day = 0; day <= totalDays; day++) {
                 const currentDate = new Date(minDate);
@@ -1231,9 +1246,9 @@ async function initApp() {
             currentMonthEnd = new Date(currentMonthEnd.getFullYear(), currentMonthEnd.getMonth() + 2, 0);
         }
 
-        // Add week/period lines based on view
-        if (fitToWidthMode) {
-            // Fit-to-width mode - show weekly gridlines
+        // Add week/period lines based on display mode
+        if (displayMode === 'weeks') {
+            // Week display mode - show weekly gridlines
             let currentWeekStart = new Date(minDate);
             while (currentWeekStart <= maxDate) {
                 const weekStartDay = Math.ceil((currentWeekStart - minDate) / (1000 * 60 * 60 * 24));
