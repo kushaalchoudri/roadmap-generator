@@ -149,6 +149,134 @@ textarea {
     box-shadow: 0 4px 8px rgba(245, 101, 101, 0.3);
 }
 
+/* Icon control buttons - compact and colorful */
+.btn-icon-control {
+    width: 42px;
+    height: 42px;
+    padding: 8px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+.btn-icon-control:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-icon-control:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn-icon-control svg {
+    stroke-width: 2.5;
+}
+
+/* Zoom In - Green */
+.btn-zoom-in {
+    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+    color: white;
+}
+
+.btn-zoom-in:hover {
+    background: linear-gradient(135deg, #38a169 0%, #2f855a 100%);
+}
+
+/* Zoom Out - Blue */
+.btn-zoom-out {
+    background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+    color: white;
+}
+
+.btn-zoom-out:hover {
+    background: linear-gradient(135deg, #3182ce 0%, #2c5282 100%);
+}
+
+/* Reset Zoom - Purple */
+.btn-reset-zoom {
+    background: linear-gradient(135deg, #9f7aea 0%, #805ad5 100%);
+    color: white;
+}
+
+.btn-reset-zoom:hover {
+    background: linear-gradient(135deg, #805ad5 0%, #6b46c1 100%);
+}
+
+/* Export - Teal */
+.btn-export {
+    background: linear-gradient(135deg, #4fd1c5 0%, #38b2ac 100%);
+    color: white;
+}
+
+.btn-export:hover {
+    background: linear-gradient(135deg, #38b2ac 0%, #319795 100%);
+}
+
+/* Import - Cyan */
+.btn-import {
+    background: linear-gradient(135deg, #63b3ed 0%, #4299e1 100%);
+    color: white;
+}
+
+.btn-import:hover {
+    background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+}
+
+/* Download - Indigo */
+.btn-download {
+    background: linear-gradient(135deg, #667eea 0%, #5a67d8 100%);
+    color: white;
+}
+
+.btn-download:hover {
+    background: linear-gradient(135deg, #5a67d8 0%, #4c51bf 100%);
+}
+
+/* Reset Timeline - Orange */
+.btn-reset-timeline {
+    background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%);
+    color: white;
+}
+
+.btn-reset-timeline:hover {
+    background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+}
+
+/* Clear - Red */
+.btn-clear {
+    background: linear-gradient(135deg, #fc8181 0%, #f56565 100%);
+    color: white;
+}
+
+.btn-clear:hover {
+    background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+}
+
+/* Control divider */
+.control-divider {
+    width: 1px;
+    height: 30px;
+    background: #e2e8f0;
+    margin: 0 8px;
+    display: inline-block;
+}
+
+/* Adjust timeline controls layout */
+.timeline-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+
 .items-list {
     margin-top: 30px;
     padding-top: 20px;
