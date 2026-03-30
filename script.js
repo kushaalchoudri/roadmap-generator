@@ -487,6 +487,9 @@ async function initApp() {
         timelineCanvas.style.maxHeight = 'none';
         timelineCanvas.style.height = 'auto';
 
+        // Add class to increase font sizes for image export (3x larger)
+        timelineCanvas.classList.add('export-image');
+
         // Use dom-to-image which preserves CSS better with higher scale for readability
         domtoimage.toPng(timelineCanvas, {
             width: (fullWidth + 50) * 2, // 2x zoom for better readability
@@ -498,6 +501,7 @@ async function initApp() {
             quality: 1.0
         }).then(function (dataUrl) {
             // Restore original styles
+            timelineCanvas.classList.remove('export-image');
             timelineCanvas.style.overflow = originalStyles.overflow;
             timelineCanvas.style.maxHeight = originalStyles.maxHeight;
             timelineCanvas.style.height = originalStyles.height;
@@ -511,6 +515,7 @@ async function initApp() {
             document.body.removeChild(a);
         }).catch(function (error) {
             // Restore original styles on error
+            timelineCanvas.classList.remove('export-image');
             timelineCanvas.style.overflow = originalStyles.overflow;
             timelineCanvas.style.maxHeight = originalStyles.maxHeight;
             timelineCanvas.style.height = originalStyles.height;
