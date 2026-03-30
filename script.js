@@ -487,12 +487,12 @@ async function initApp() {
         timelineCanvas.style.maxHeight = 'none';
         timelineCanvas.style.height = 'auto';
 
-        // Use dom-to-image which preserves CSS better
+        // Use dom-to-image which preserves CSS better with higher scale for readability
         domtoimage.toPng(timelineCanvas, {
-            width: fullWidth + 50,
-            height: fullHeight + 50,
+            width: (fullWidth + 50) * 2, // 2x zoom for better readability
+            height: (fullHeight + 50) * 2, // 2x zoom
             style: {
-                transform: 'scale(1)',
+                transform: 'scale(2)', // Scale up 2x
                 transformOrigin: 'top left'
             },
             quality: 1.0
@@ -559,7 +559,7 @@ async function initApp() {
             const workstreamId = `workstream-${workstreamName.replace(/\s+/g, '-')}`;
             const isCollapsed = sessionStorage.getItem(workstreamId) === 'collapsed';
 
-            // Workstream header row - compact styling with delete button
+            // Workstream header row - compact styling with copy and delete buttons
             html += `
                 <tr class="workstream-header-row">
                     <td colspan="8" style="cursor: pointer; position: relative;">
@@ -568,13 +568,21 @@ async function initApp() {
                                 <span class="workstream-toggle-icon" id="${workstreamId}-icon">${isCollapsed ? '▶' : '▼'}</span>
                                 ${escapeHtml(workstreamName)} <span style="font-weight: 400; font-size: 11px; color: #6b7280;">(${items.length})</span>
                             </div>
-                            <button
-                                class="btn-table-action btn-table-delete"
-                                onclick="event.stopPropagation(); deleteWorkstream('${escapeHtml(workstreamName).replace(/'/g, "\\'")}');"
-                                title="Delete entire workstream"
-                                style="margin-left: 10px;">
-                                Delete Workstream
-                            </button>
+                            <div style="display: flex; gap: 10px;">
+                                <button
+                                    class="btn-table-action"
+                                    onclick="event.stopPropagation(); copyWorkstream('${escapeHtml(workstreamName).replace(/'/g, "\\'")}');"
+                                    title="Copy entire workstream"
+                                    style="background: #3b82f6; color: white;">
+                                    Copy Workstream
+                                </button>
+                                <button
+                                    class="btn-table-action btn-table-delete"
+                                    onclick="event.stopPropagation(); deleteWorkstream('${escapeHtml(workstreamName).replace(/'/g, "\\'")}');"
+                                    title="Delete entire workstream">
+                                    Delete Workstream
+                                </button>
+                            </div>
                         </div>
                     </td>
                 </tr>
@@ -700,8 +708,16 @@ async function initApp() {
                 </td>
                 <td>
                     <div class="table-actions">
-                        <button class="btn-table-action btn-table-duplicate" onclick="duplicateRow('${item.id}')">Duplicate</button>
-                        <button class="btn-table-action btn-table-delete" onclick="deleteRow('${item.id}')">Delete</button>
+                        <button class="btn-table-action btn-table-duplicate" onclick="duplicateRow('${item.id}')" title="Copy">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                            </svg>
+                        </button>
+                        <button class="btn-table-action btn-table-delete" onclick="deleteRow('${item.id}')" title="Delete">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                        </button>
                     </div>
                 </td>
             </tr>
@@ -1118,6 +1134,20 @@ async function initApp() {
 
         // Add vertical lines and today marker - GLOBAL container spanning entire timeline
         let gridLinesHtml = '';
+
+        // Add weekend shading (Saturday and Sunday) - light grey
+        for (let day = 0; day <= totalDays; day++) {
+            const currentDate = new Date(minDate);
+            currentDate.setDate(currentDate.getDate() + day);
+            const dayOfWeek = currentDate.getDay();
+
+            // 0 = Sunday, 6 = Saturday
+            if (dayOfWeek === 0 || dayOfWeek === 6) {
+                const dayLeft = day * pixelsPerDay;
+                const dayWidth = pixelsPerDay;
+                gridLinesHtml += `<div class="weekend-shade" style="left: ${dayLeft}px; width: ${dayWidth}px;"></div>`;
+            }
+        }
 
         // Add month-end lines for all views (grey line on last day of each month)
         let currentMonthEnd = new Date(minDate.getFullYear(), minDate.getMonth() + 1, 0); // Last day of first month
@@ -1979,6 +2009,48 @@ async function deleteWorkstream(workstreamName) {
 // Make deleteWorkstream globally accessible
 window.deleteWorkstream = deleteWorkstream;
 
+// Copy entire workstream
+async function copyWorkstream(workstreamName) {
+    console.log('Copy workstream called for:', workstreamName);
+
+    const itemsInWorkstream = roadmapItems.filter(item => item.workstream === workstreamName);
+    const count = itemsInWorkstream.length;
+
+    if (count === 0) {
+        alert('No items in this workstream to copy.');
+        return;
+    }
+
+    if (confirm(`Copy workstream "${workstreamName}" with all ${count} items? Dates will be blank and names will be prefixed with "Copy of".`)) {
+        const newWorkstreamName = `Copy of ${workstreamName}`;
+
+        // Create copies of all items in the workstream
+        itemsInWorkstream.forEach(item => {
+            const copiedItem = {
+                id: Date.now() + Math.random() * 1000, // Unique ID
+                workstream: newWorkstreamName,
+                type: item.type,
+                name: `Copy of ${item.name}`,
+                startDate: '', // Blank dates
+                endDate: '',
+                date: '', // For milestones
+                status: 'not-started',
+                description: item.description || ''
+            };
+            roadmapItems.push(copiedItem);
+        });
+
+        await saveData();
+        window.renderTable();
+        window.renderTimeline();
+
+        alert(`Workstream "${newWorkstreamName}" created with ${count} items (dates are blank).`);
+    }
+}
+
+// Make copyWorkstream globally accessible
+window.copyWorkstream = copyWorkstream;
+
 // Listen for reinit event
 document.addEventListener('reinit', () => {
     const tableBody = document.getElementById('tableBody');
@@ -1991,6 +2063,34 @@ document.addEventListener('reinit', () => {
 });
 
 // Utility functions
+// Count weekdays between two dates (excluding Saturday and Sunday)
+function countWeekdays(startDate, endDate) {
+    let count = 0;
+    const current = new Date(startDate);
+    while (current <= endDate) {
+        const dayOfWeek = current.getDay();
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Not Sunday(0) or Saturday(6)
+            count++;
+        }
+        current.setDate(current.getDate() + 1);
+    }
+    return count;
+}
+
+// Get weekday position (excluding weekends) from start date
+function getWeekdayPosition(startDate, targetDate) {
+    let position = 0;
+    const current = new Date(startDate);
+    while (current < targetDate) {
+        const dayOfWeek = current.getDay();
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Not weekend
+            position++;
+        }
+        current.setDate(current.getDate() + 1);
+    }
+    return position;
+}
+
 function formatDate(dateString) {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
