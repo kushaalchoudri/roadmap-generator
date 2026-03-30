@@ -248,8 +248,9 @@ textarea {
 
 .workstream-header-row td {
     padding: 5px 8px !important; /* Very compact padding */
-    font-size: 12px;
+    font-size: 14px; /* Increased from 12px */
     line-height: 1.2;
+    font-weight: 600; /* Make workstream name bolder */
 }
 
 .workstream-header-row:hover {
@@ -370,13 +371,14 @@ textarea {
 }
 
 .btn-table-action {
-    padding: 3px 6px; /* More compact buttons */
+    padding: 4px 6px; /* Compact padding for icon buttons */
     border: none;
     border-radius: 3px;
-    font-size: 10px; /* Smaller font */
-    font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .btn-table-duplicate {
@@ -781,7 +783,7 @@ textarea {
     min-width: 200px;
     flex-shrink: 0;
     font-weight: 700;
-    font-size: 13px;
+    font-size: 14px; /* Increased from 13px */
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -894,7 +896,7 @@ textarea {
     top: 15px;
     left: 0;
     right: 0;
-    height: 10px;
+    height: 20px; /* 2x thickness: increased from 10px to 20px */
     z-index: 1;
     border-radius: 2px;
 }
@@ -905,7 +907,7 @@ textarea {
     top: 0;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 11px;
+    font-size: 12px; /* Increased from 11px */
     font-weight: 600;
     color: #000;
     white-space: nowrap;
@@ -914,7 +916,7 @@ textarea {
 }
 
 .timeline-bar:hover .timeline-bar-line {
-    height: 12px;
+    height: 24px; /* Hover effect: 2x from 12px to 24px */
 }
 
 /* Drag handles */
@@ -983,7 +985,7 @@ textarea {
 .timeline-bar-start-date {
     position: absolute !important;
     left: 0 !important;
-    top: 28px !important;
+    top: 38px !important; /* Moved down from 28px to 38px (20px bar ends at 35px + 3px gap) */
     font-size: 10px !important;
     font-weight: 500 !important;
     color: #4b5563 !important;
@@ -996,7 +998,7 @@ textarea {
 .timeline-bar-end-date {
     position: absolute !important;
     right: 0 !important;
-    top: 28px !important;
+    top: 38px !important; /* Moved down from 28px to 38px */
     font-size: 10px !important;
     font-weight: 500 !important;
     color: #4b5563 !important;
@@ -1017,7 +1019,7 @@ textarea {
 }
 
 .timeline-bar.stacked .timeline-bar-end-date {
-    top: 28px !important; /* Below the line */
+    top: 38px !important; /* Below the line - adjusted for thicker activity bar */
     font-size: 9px !important; /* Smaller for compressed activities */
 }
 
@@ -1031,7 +1033,7 @@ textarea {
     position: absolute !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
-    top: 28px !important;
+    top: 38px !important; /* Adjusted for thicker activity bar */
     font-size: 10px !important;
     font-weight: 500 !important;
     color: #4b5563 !important;
@@ -1061,6 +1063,15 @@ textarea {
     pointer-events: none;
     z-index: 0; /* Behind activity bars (activity bars are z-index: 3) */
     opacity: 0.5;
+}
+
+.weekend-shade {
+    position: absolute;
+    background: rgba(220, 220, 220, 0.15); /* Very light grey transparent overlay */
+    top: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 0; /* Behind everything else */
 }
 
 /* Month separator lines (thicker) */
