@@ -382,9 +382,47 @@ async function initApp() {
         });
     }
 
+    // Fit to Width button - adjusts timeline to fit viewport width
+    const fitToWidthBtn = document.getElementById('fitToWidthBtn');
+    if (fitToWidthBtn) {
+        fitToWidthBtn.addEventListener('click', () => {
+            const timelineCanvas = document.getElementById('timeline');
+            if (!timelineCanvas) return;
+
+            // Get the viewport width (container width)
+            const containerWidth = timelineCanvas.parentElement.clientWidth;
+
+            // Get timeline content width
+            const timelineContent = timelineCanvas.querySelector('.timeline-content');
+            if (!timelineContent) {
+                alert('Please add some activities or milestones first');
+                return;
+            }
+
+            const contentWidth = timelineContent.scrollWidth;
+
+            // If content is wider than container, scale it to fit
+            if (contentWidth > containerWidth) {
+                const scale = (containerWidth - 40) / contentWidth; // 40px for padding
+                timelineCanvas.style.zoom = scale;
+                timelineCanvas.style.width = '100%';
+            } else {
+                // Already fits, just center it
+                timelineCanvas.style.zoom = '1';
+                timelineCanvas.style.width = '100%';
+            }
+        });
+    }
+
     // Reset timeline width button
     if (resetTimelineBtn) {
         resetTimelineBtn.addEventListener('click', () => {
+            // Reset zoom and extension
+            const timelineCanvas = document.getElementById('timeline');
+            if (timelineCanvas) {
+                timelineCanvas.style.zoom = '1';
+                timelineCanvas.style.width = '';
+            }
             timelineExtensionDays = 0;
             sessionStorage.removeItem('timelineExtensionDays');
             renderTimeline();
