@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Database Inspector</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+</head>
+<body>
+    <h1>Database Contents</h1>
+    <button onclick="checkDB()">Check Database</button>
+    <pre id="output"></pre>
+    <script>
+        async function checkDB() {
+            const SQL = await initSqlJs({
+                locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
+            });
+            
+            const savedDb = localStorage.getItem('sqliteDb');
+            if (!savedDb) {
+                document.getElementById('output').textContent = 'No database found in localStorage';
+                return;
+            }
+            
+            const binary = atob(savedDb);
+            const uint8Array = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                uint8Array[i] = binary.charCodeAt(i);
+            }
+            
+            const db = new SQL.Database(uint8Array);
+            
+            const roadmaps = db.exec('SELECT * FROM roadmaps');
+            const items = db.exec('SELECT id, roadmap_id, name, type FROM items');
+            
+            let output = 'ROADMAPS:\n';
+            if (roadmaps.length > 0) {
+                roadmaps[0].values.forEach(row => {
+                    output += `  ID: ${row[0]}, Name: ${row[1]}\n`;
+                });
+            } else {
+                output += '  None\n';
+            }
+            
+            output += '\nITEMS:\n';
+            if (items.length > 0) {
+                items[0].values.forEach(row => {
+                    output += `  ID: ${row[0]}, Roadmap ID: ${row[1]}, Name: ${row[2]}, Type: ${row[3]}\n`;
+                });
+            } else {
+                output += '  None\n';
+            }
+            
+            document.getElementById('output').textContent = output;
+        }
+    </script>
+</body>
+</html>
