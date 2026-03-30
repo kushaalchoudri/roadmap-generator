@@ -1093,11 +1093,10 @@ async function initApp() {
 
         let pixelsPerDay;
         if (fitToWidthMode) {
-            // In fit-to-width mode, show weeks instead of days
-            // Each week takes the space of 3 normal days
-            const totalWeeks = Math.ceil(totalDays / 7);
-            const pixelsPer3Days = 3 * 3; // 3 days at 3 pixels per day = 9 pixels
-            pixelsPerDay = pixelsPer3Days / 7; // Divide by 7 to get pixels per day for weekly display
+            // In fit-to-width mode, 7 days should take the space of 3 days in week view
+            // Week view uses 30 pixels per day
+            const weekViewPixelsPer3Days = 30 * 3; // 3 days × 30 pixels = 90 pixels
+            pixelsPerDay = weekViewPixelsPer3Days / 7; // 90 pixels ÷ 7 days = ~12.86 pixels per day
         } else {
             // Normal mode - use existing logic
             pixelsPerDay = currentView === 'week' ? Math.max(30, 2400 / totalDays) :  // 30+ pixels per day for week view (doubled from 15)
