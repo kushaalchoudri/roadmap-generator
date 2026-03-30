@@ -88,6 +88,7 @@ async function saveCurrentRoadmap() {
     if (!currentRoadmapId) return;
 
     console.log('Saving roadmap, items count:', roadmapItems.length);
+    console.log('Items being saved:', roadmapItems);
 
     // Try SQLite first
     if (roadmapDB.db) {
@@ -107,7 +108,7 @@ async function saveCurrentRoadmap() {
 
             await roadmapDB.saveItems(currentRoadmapId, roadmapItems);
             await roadmapDB.saveWorkstreamOrder(currentRoadmapId, workstreamOrder);
-            console.log('Saved to SQLite');
+            console.log('Saved to SQLite successfully');
             return;
         } catch (error) {
             console.error('Error saving to SQLite:', error);
@@ -558,12 +559,23 @@ async function initApp() {
             const workstreamId = `workstream-${workstreamName.replace(/\s+/g, '-')}`;
             const isCollapsed = sessionStorage.getItem(workstreamId) === 'collapsed';
 
-            // Workstream header row - compact styling
+            // Workstream header row - compact styling with delete button
             html += `
-                <tr class="workstream-header-row" onclick="toggleWorkstream('${workstreamId}')">
-                    <td colspan="8" style="cursor: pointer;">
-                        <span class="workstream-toggle-icon" id="${workstreamId}-icon">${isCollapsed ? '▶' : '▼'}</span>
-                        ${escapeHtml(workstreamName)} <span style="font-weight: 400; font-size: 11px; color: #6b7280;">(${items.length})</span>
+                <tr class="workstream-header-row">
+                    <td colspan="8" style="cursor: pointer; position: relative;">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div onclick="toggleWorkstream('${workstreamId}')" style="flex: 1;">
+                                <span class="workstream-toggle-icon" id="${workstreamId}-icon">${isCollapsed ? '▶' : '▼'}</span>
+                                ${escapeHtml(workstreamName)} <span style="font-weight: 400; font-size: 11px; color: #6b7280;">(${items.length})</span>
+                            </div>
+                            <button
+                                class="btn-table-action btn-table-delete"
+                                onclick="event.stopPropagation(); deleteWorkstream('${escapeHtml(workstreamName).replace(/'/g, "\\'")}');"
+                                title="Delete entire workstream"
+                                style="margin-left: 10px;">
+                                Delete Workstream
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `;
@@ -720,12 +732,20 @@ async function initApp() {
     function handleFieldChange(e) {
         const field = e.target;
         const row = field.closest('tr');
-        const itemId = parseInt(row.dataset.id);
+        const itemId = row.dataset.id;
         const fieldName = field.dataset.field;
         const value = field.value;
 
-        const item = roadmapItems.find(i => i.id === itemId);
-        if (!item) return;
+        console.log('Field change:', fieldName, 'ID:', itemId, 'Value:', value);
+
+        // Find item by ID (handle both string and number IDs)
+        const item = roadmapItems.find(i => String(i.id) === String(itemId));
+        if (!item) {
+            console.error('Item not found for ID:', itemId);
+            return;
+        }
+
+        console.log('Found item:', item);
 
         // Handle type change
         if (fieldName === 'type') {
@@ -814,29 +834,31 @@ async function initApp() {
 
         console.log('Original date range:', minDate.toISOString(), 'to', maxDate.toISOString());
 
-        // Add padding based on view
+        // Add padding based on view - minimal padding (2 days extra)
+        // All views now start from the actual data, not from beginning of period
         if (currentView === 'week') {
             // Week view - find Monday of the week containing minDate
             const minDay = minDate.getDay();
             const daysToMonday = minDay === 0 ? 6 : minDay - 1; // Sunday is 0, we want Monday
             minDate.setDate(minDate.getDate() - daysToMonday);
 
-            // Find Sunday of the week containing maxDate, then add one more week for padding
-            const maxDay = maxDate.getDay();
-            const daysToSunday = maxDay === 0 ? 0 : 7 - maxDay;
-            maxDate.setDate(maxDate.getDate() + daysToSunday + 7); // Add extra week
+            // Add just 2 days padding after maxDate
+            maxDate.setDate(maxDate.getDate() + 2);
         } else if (currentView === 'year') {
-            minDate.setMonth(0, 1);
-            maxDate.setFullYear(maxDate.getFullYear() + 1); // Add one more year for padding
-            maxDate.setMonth(11, 31);
-        } else if (currentView === 'quarter') {
-            const startQuarter = Math.floor(minDate.getMonth() / 3) * 3;
-            minDate.setMonth(startQuarter, 1);
-            const endQuarter = Math.floor(maxDate.getMonth() / 3) * 3 + 2;
-            maxDate.setMonth(endQuarter + 3 + 1, 0); // Add one more quarter for padding
-        } else { // month view
+            // Year view - start from the first day of the month containing minDate
             minDate.setDate(1);
-            maxDate.setMonth(maxDate.getMonth() + 2, 0); // Add one more month for padding
+            // Add 2 days padding
+            maxDate.setDate(maxDate.getDate() + 2);
+        } else if (currentView === 'quarter') {
+            // Quarter view - start from the first day of the month containing minDate
+            minDate.setDate(1);
+            // Add 2 days padding
+            maxDate.setDate(maxDate.getDate() + 2);
+        } else { // month view
+            // Month view - start from the first day of the month containing minDate
+            minDate.setDate(1);
+            // Add 2 days padding
+            maxDate.setDate(maxDate.getDate() + 2);
         }
 
         console.log('Padded date range:', minDate.toISOString(), 'to', maxDate.toISOString());
@@ -864,34 +886,78 @@ async function initApp() {
                 currentWeekStart.setDate(currentWeekStart.getDate() + 7);
             }
         } else if (currentView === 'year') {
-            // Year view
+            // Year view with months
             const currentYear = minDate.getFullYear();
             const endYear = maxDate.getFullYear();
+            console.log('Year view: generating periods from', currentYear, 'to', endYear);
             for (let year = currentYear; year <= endYear; year++) {
                 const yearStart = new Date(year, 0, 1);
                 const yearEnd = new Date(year, 11, 31);
                 const daysInYear = Math.ceil((yearEnd - yearStart) / (1000 * 60 * 60 * 24)) + 1;
-                periods.push({
+
+                // Calculate months in this year
+                const months = [];
+                for (let month = 0; month < 12; month++) {
+                    const monthStart = new Date(year, month, 1);
+                    const monthEnd = new Date(year, month + 1, 0);
+                    months.push({
+                        name: monthStart.toLocaleDateString('en-US', { month: 'short' }),
+                        start: monthStart,
+                        end: monthEnd
+                    });
+                }
+
+                const yearPeriod = {
                     label: year.toString(),
                     start: yearStart,
                     end: yearEnd,
-                    days: daysInYear
-                });
+                    days: daysInYear,
+                    months: months
+                };
+                console.log('Adding year period:', yearPeriod.label, 'with', months.length, 'months');
+                periods.push(yearPeriod);
             }
         } else if (currentView === 'quarter') {
-            // Quarter view
+            // Quarter view with weeks - start from actual data, not quarter boundary
             let currentDate = new Date(minDate);
             while (currentDate <= maxDate) {
                 const quarter = Math.floor(currentDate.getMonth() / 3) + 1;
                 const quarterStart = new Date(currentDate.getFullYear(), (quarter - 1) * 3, 1);
                 const quarterEnd = new Date(currentDate.getFullYear(), quarter * 3, 0);
-                const daysInQuarter = Math.ceil((quarterEnd - quarterStart) / (1000 * 60 * 60 * 24)) + 1;
+
+                // Use the later of quarterStart or minDate as the actual start
+                const actualStart = quarterStart > minDate ? quarterStart : new Date(minDate);
+                const actualEnd = quarterEnd < maxDate ? quarterEnd : new Date(maxDate);
+                const daysInPeriod = Math.ceil((actualEnd - actualStart) / (1000 * 60 * 60 * 24)) + 1;
+
+                // Calculate weeks starting from the actual visible start date, aligned to Monday
+                const weeks = [];
+                let weekStart = new Date(actualStart);
+
+                while (weekStart <= actualEnd) {
+                    // Find Monday of the current week (skip to Monday if not already)
+                    const dayOfWeek = weekStart.getDay();
+                    const daysToMonday = dayOfWeek === 0 ? 1 : (dayOfWeek === 1 ? 0 : (8 - dayOfWeek));
+                    if (daysToMonday > 0) {
+                        weekStart.setDate(weekStart.getDate() + daysToMonday);
+                    }
+
+                    if (weekStart > actualEnd) break;
+
+                    const weekNum = getWeekNumber(weekStart);
+                    weeks.push({
+                        number: weekNum,
+                        start: new Date(weekStart)
+                    });
+                    weekStart.setDate(weekStart.getDate() + 7);
+                }
 
                 periods.push({
                     label: `Q${quarter} ${currentDate.getFullYear()}`,
-                    start: quarterStart,
-                    end: quarterEnd,
-                    days: daysInQuarter
+                    start: actualStart,
+                    end: actualEnd,
+                    days: daysInPeriod,
+                    weeks: weeks
                 });
 
                 currentDate = new Date(quarterEnd);
@@ -962,13 +1028,14 @@ async function initApp() {
                 if (!workstreams[item.workstream]) {
                     workstreams[item.workstream] = [];
                 }
+                console.log('Adding activity to timeline:', item.name, 'Start:', item.startDate, 'End:', item.endDate);
                 workstreams[item.workstream].push(item);
             }
         });
 
         // Calculate dimensions
         const totalDays = Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24)) + 1;
-        const pixelsPerDay = currentView === 'week' ? Math.max(15, 1200 / totalDays) :  // 15+ pixels per day for week view
+        const pixelsPerDay = currentView === 'week' ? Math.max(30, 2400 / totalDays) :  // 30+ pixels per day for week view (doubled from 15)
                             currentView === 'year' ? Math.max(1, 1200 / totalDays) :
                             currentView === 'quarter' ? Math.max(2, 1200 / totalDays) :
                             Math.max(3, 1200 / totalDays);
@@ -1009,6 +1076,24 @@ async function initApp() {
                 html += `</div>`;
             }
 
+            // Show weeks in quarter view
+            if (currentView === 'quarter' && period.weeks) {
+                html += `<div class="timeline-weeks" style="display: flex;">`;
+                period.weeks.forEach(week => {
+                    html += `<div class="timeline-week" style="flex: 1; font-size: 9px;">W${week.number}</div>`;
+                });
+                html += `</div>`;
+            }
+
+            // Show months in year view
+            if (currentView === 'year' && period.months) {
+                html += `<div class="timeline-weeks" style="display: flex;">`;
+                period.months.forEach(month => {
+                    html += `<div class="timeline-week" style="flex: 1; font-size: 9px;">${month.name}</div>`;
+                });
+                html += `</div>`;
+            }
+
             // Show days in week view with actual dates
             if (currentView === 'week' && period.days === 7) {
                 html += `<div class="timeline-weeks" style="display: flex;">`;
@@ -1034,20 +1119,26 @@ async function initApp() {
         // Add vertical lines and today marker - GLOBAL container spanning entire timeline
         let gridLinesHtml = '';
 
-        // Add week/month lines based on view
+        // Add month-end lines for all views (grey line on last day of each month)
+        let currentMonthEnd = new Date(minDate.getFullYear(), minDate.getMonth() + 1, 0); // Last day of first month
+        while (currentMonthEnd <= maxDate) {
+            const daysSinceMin = Math.ceil((currentMonthEnd - minDate) / (1000 * 60 * 60 * 24));
+            const monthEndLeft = (daysSinceMin + 1) * pixelsPerDay; // +1 to position at end of last day
+            gridLinesHtml += `<div class="month-end-line" style="left: ${monthEndLeft}px;"></div>`;
+
+            // Move to next month end
+            currentMonthEnd = new Date(currentMonthEnd.getFullYear(), currentMonthEnd.getMonth() + 2, 0);
+        }
+
+        // Add week/period lines based on view
         if (currentView === 'week') {
-            // Week view - show daily gridlines + thicker month boundaries
+            // Week view - show daily gridlines
             for (let day = 0; day <= totalDays; day++) {
                 const currentDate = new Date(minDate);
                 currentDate.setDate(currentDate.getDate() + day);
                 const dayLeft = day * pixelsPerDay;
 
-                // Check if this is the first day of a month (thicker line)
-                if (currentDate.getDate() === 1) {
-                    gridLinesHtml += `<div class="month-line" style="left: ${dayLeft}px;"></div>`;
-                } else {
-                    gridLinesHtml += `<div class="week-line" style="left: ${dayLeft}px; opacity: 0.3;"></div>`;
-                }
+                gridLinesHtml += `<div class="week-line" style="left: ${dayLeft}px; opacity: 0.3;"></div>`;
             }
         } else if (currentView === 'month') {
             periods.forEach(period => {
@@ -1060,7 +1151,7 @@ async function initApp() {
                 }
             });
         } else {
-            // For quarter and year view, show month lines
+            // For quarter and year view, show period start lines
             periods.forEach(period => {
                 const periodStartDay = Math.ceil((period.start - minDate) / (1000 * 60 * 60 * 24));
                 const periodLeft = periodStartDay * pixelsPerDay;
@@ -1089,11 +1180,6 @@ async function initApp() {
         html += `<div class="timeline-gridlines-container" style="position: absolute; top: 0; left: 200px; right: 0; bottom: 0; pointer-events: none; z-index: 1;">`;
         html += gridLinesHtml;
         html += `</div>`;
-
-        // Add TODAY label outside gridlines container for better visibility
-        if (todayLabelHtml) {
-            html += todayLabelHtml;
-        }
 
         // General milestones
         let isFirstWorkstream = true;
@@ -1229,16 +1315,46 @@ async function initApp() {
                 };
                 const lineColor = lineColors[status] || '#9ca3af';
 
+                // Detect activity duration for layout (based on actual days, not pixels)
+                const activityDuration = duration;
+                let datePositionClass = '';
+                let dateDisplay = '';
+
+                if (activityDuration === 1) {
+                    // 1-day activity: show single date below, name above
+                    datePositionClass = 'single-day';
+                    dateDisplay = `<div class="timeline-bar-single-date">${startDateStr}</div>`;
+                } else if (activityDuration <= 3) {
+                    // Short activity (2-3 days): stack dates vertically, move name higher
+                    datePositionClass = 'stacked';
+                    dateDisplay = `
+                        <div class="timeline-bar-start-date">${startDateStr}</div>
+                        <div class="timeline-bar-end-date">${endDateStr}</div>
+                    `;
+                } else if (width < 100) {
+                    // Visually compressed activity: also stack to prevent overlap
+                    datePositionClass = 'stacked';
+                    dateDisplay = `
+                        <div class="timeline-bar-start-date">${startDateStr}</div>
+                        <div class="timeline-bar-end-date">${endDateStr}</div>
+                    `;
+                } else {
+                    // Normal activity: dates on both ends below line
+                    dateDisplay = `
+                        <div class="timeline-bar-start-date">${startDateStr}</div>
+                        <div class="timeline-bar-end-date">${endDateStr}</div>
+                    `;
+                }
+
                 html += `
-                    <div class="timeline-bar"
+                    <div class="timeline-bar ${datePositionClass}"
                          data-item-id="${item.id}"
                          style="left: ${left}px; width: ${width}px; top: ${top}px; z-index: 3;"
                          title="${escapeHtml(item.name)}\n${startDateStr} - ${endDateStr}">
                         <div class="timeline-bar-drag-handle-start"></div>
                         <div class="timeline-bar-line ${status}" style="background: ${lineColor};"></div>
                         <div class="timeline-bar-description">${escapeHtml(item.name)}</div>
-                        <div class="timeline-bar-start-date">${startDateStr}</div>
-                        <div class="timeline-bar-end-date">${endDateStr}</div>
+                        ${dateDisplay}
                         <div class="timeline-bar-drag-handle-end"></div>
                     </div>
                 `;
@@ -1266,9 +1382,37 @@ async function initApp() {
             }
         });
 
+        // Calculate total timeline height (sum of all workstreams + general milestones)
+        let totalTimelineHeight = 0;
+        if (generalMilestones.length > 0) {
+            totalTimelineHeight += 65; // General milestones section height
+        }
+
+        // Add each workstream height
+        sortedWorkstreamNames.forEach(workstreamName => {
+            const items = workstreams[workstreamName];
+            const milestones = items.filter(i => i.type === 'milestone');
+            const activities = items.filter(i => i.type === 'activity');
+
+            const maxRow = activities.length > 0 ? Math.max(...activities.map(a => a.assignedRow || 0), -1) + 1 : 0;
+            const totalActivityHeight = maxRow * 50;
+            const milestoneHeight = milestones.length > 0 ? 65 : 0;
+            const workstreamHeight = Math.max(milestoneHeight + totalActivityHeight + 64, 100);
+            totalTimelineHeight += workstreamHeight;
+        });
+
         html += '</div>'; // Close timeline-grid
         html += '<div class="timeline-border-resize-handle" title="Drag to extend timeline"></div>'; // Add horizontal resize handle to border
         html += '</div>'; // Close timeline-bordered-container
+
+        // Add TODAY label below all workstreams in white space above border
+        if (todayLabelHtml) {
+            const todayDays = Math.ceil((today - minDate) / (1000 * 60 * 60 * 24));
+            const todayLeft = todayDays * pixelsPerDay;
+            // Position label below the bordered container with 15px padding from bottom
+            html += `<div class="today-marker-label-bottom" style="left: ${200 + todayLeft}px; top: ${totalTimelineHeight + 15}px;">TODAY</div>`;
+        }
+
         html += '</div>'; // Close timeline-content
         timelineCanvas.innerHTML = html;
 
@@ -1525,7 +1669,7 @@ async function initApp() {
                     const deltaX = e.clientX - startX;
 
                     // Calculate how many extra days this represents
-                    const pixelsPerDay = currentView === 'week' ? 15 :
+                    const pixelsPerDay = currentView === 'week' ? 30 :  // Updated to match doubled week view
                                         currentView === 'month' ? 3 :
                                         currentView === 'quarter' ? 2 : 1;
 
@@ -1562,11 +1706,16 @@ async function initApp() {
             });
         });
     }
+
+    // Expose render functions globally so they can be called from delete/duplicate
+    window.renderTable = renderTable;
+    window.renderTimeline = renderTimeline;
 }
 
 // Global function for deleting rows
 // Duplicate a row to a new or existing workstream
 async function duplicateRow(id) {
+    console.log('Duplicate row called for ID:', id);
     const item = roadmapItems.find(i => i.id == id);
     if (!item) return;
 
@@ -1695,22 +1844,31 @@ async function duplicateRow(id) {
             targetWorkstream = item.workstream;
         }
 
-        // Create duplicate item
+        // Create duplicate item with deep copy and integer ID
         const duplicateItem = {
-            ...item,
-            id: Date.now() + Math.random(), // Ensure unique ID
-            workstream: targetWorkstream
+            id: Date.now(), // Use timestamp as unique integer ID
+            workstream: targetWorkstream,
+            type: item.type,
+            name: item.name,
+            startDate: item.startDate,
+            endDate: item.endDate,
+            date: item.date,
+            status: item.status,
+            description: item.description
         };
 
+        console.log('Creating duplicate item:', duplicateItem);
         roadmapItems.push(duplicateItem);
+        console.log('Total items after duplicate:', roadmapItems.length);
         await saveData();
 
         // Close dialog
         dialog.remove();
 
         // Refresh UI
-        renderTable();
-        renderTimeline();
+        console.log('Calling renderTable and renderTimeline after duplicate');
+        window.renderTable();
+        window.renderTimeline();
 
         // Show save button
         const saveRoadmapBtn = document.getElementById('saveRoadmapBtn');
@@ -1726,6 +1884,9 @@ async function duplicateRow(id) {
         }
     });
 }
+
+// Make duplicateRow globally accessible
+window.duplicateRow = duplicateRow;
 
 // Move workstream up or down
 window.moveWorkstream = function(workstreamName, direction) {
@@ -1769,28 +1930,54 @@ window.moveWorkstream = function(workstreamName, direction) {
         workstreamOrder[nextWorkstream] = temp;
     }
 
-    // Save to sessionStorage
+    // Save to sessionStorage and database
     sessionStorage.setItem('workstreamOrder', JSON.stringify(workstreamOrder));
+    saveData();
 
-    // Re-render timeline
-    const renderFn = document.querySelector('.timeline-canvas')?.__renderTimeline;
-    if (typeof renderTimeline === 'function') {
-        renderTimeline();
+    // Re-render using the global exposed functions
+    if (typeof window.renderTable === 'function' && typeof window.renderTimeline === 'function') {
+        window.renderTable();
+        window.renderTimeline();
     } else {
         location.reload(); // Fallback
     }
 };
 
 async function deleteRow(id) {
+    console.log('Delete row called for ID:', id);
     if (confirm('Are you sure you want to delete this item?')) {
         roadmapItems = roadmapItems.filter(item => item.id != id);
         await saveData();
-
-        // Re-initialize to refresh everything
-        const event = new Event('reinit');
-        document.dispatchEvent(event);
+        renderTable();
+        renderTimeline();
     }
 }
+
+// Make deleteRow globally accessible
+window.deleteRow = deleteRow;
+
+// Delete entire workstream
+async function deleteWorkstream(workstreamName) {
+    console.log('Delete workstream called for:', workstreamName);
+
+    const itemsInWorkstream = roadmapItems.filter(item => item.workstream === workstreamName);
+    const count = itemsInWorkstream.length;
+
+    if (confirm(`Are you sure you want to delete the workstream "${workstreamName}" and all ${count} items in it? This cannot be undone.`)) {
+        // Remove all items in this workstream
+        roadmapItems = roadmapItems.filter(item => item.workstream !== workstreamName);
+
+        // Remove from workstream order
+        delete workstreamOrder[workstreamName];
+
+        await saveData();
+        window.renderTable();
+        window.renderTimeline();
+    }
+}
+
+// Make deleteWorkstream globally accessible
+window.deleteWorkstream = deleteWorkstream;
 
 // Listen for reinit event
 document.addEventListener('reinit', () => {

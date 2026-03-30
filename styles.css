@@ -1005,16 +1005,62 @@ textarea {
     pointer-events: none !important;
 }
 
+/* Stacked dates for short activities */
+.timeline-bar.stacked .timeline-bar-description {
+    top: -12px !important; /* Move name much higher for short activities to avoid overlap with start date */
+    font-size: 10px !important; /* Slightly smaller font to reduce overlap */
+}
+
+.timeline-bar.stacked .timeline-bar-start-date {
+    top: 2px !important; /* Above the line */
+    font-size: 9px !important; /* Smaller for compressed activities */
+}
+
+.timeline-bar.stacked .timeline-bar-end-date {
+    top: 28px !important; /* Below the line */
+    font-size: 9px !important; /* Smaller for compressed activities */
+}
+
+/* Single day activity - show one date centered below line */
+.timeline-bar.single-day .timeline-bar-description {
+    top: -12px !important; /* Move name much higher to avoid overlap */
+    font-size: 10px !important; /* Slightly smaller */
+}
+
+.timeline-bar-single-date {
+    position: absolute !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    top: 28px !important;
+    font-size: 10px !important;
+    font-weight: 500 !important;
+    color: #4b5563 !important;
+    white-space: nowrap !important;
+    display: block !important;
+    pointer-events: none !important;
+}
+
 /* Week separator lines */
 .week-line {
     position: absolute;
     width: 1px;
-    background: linear-gradient(to bottom, transparent 0%, #d1d5db 10%, #d1d5db 90%, transparent 100%);
+    background: linear-gradient(to bottom, transparent 0%, transparent 15%, #d1d5db 15%, #d1d5db 85%, transparent 85%, transparent 100%);
     top: 0;
     bottom: 0;
     pointer-events: none;
     z-index: 1;
     opacity: 0.4;
+}
+
+.month-end-line {
+    position: absolute;
+    width: 2px;
+    background: #6b7280; /* Solid grey line from top to bottom */
+    top: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 0; /* Behind activity bars (activity bars are z-index: 3) */
+    opacity: 0.5;
 }
 
 /* Month separator lines (thicker) */
@@ -1055,6 +1101,21 @@ textarea {
     white-space: nowrap;
     box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
     z-index: 100; /* Very high z-index to ensure visibility */
+    pointer-events: none;
+}
+
+.today-marker-label-bottom {
+    position: absolute;
+    transform: translateX(-50%);
+    background: #ef4444;
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 4px;
+    white-space: nowrap;
+    box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
+    z-index: 100;
     pointer-events: none;
 }
 

@@ -335,12 +335,27 @@ class RoadmapDatabase {
     }
 
     /**
-     * Save multiple items at once
+     * Save multiple items at once (sync with database - delete removed items)
      */
     async saveItems(roadmapId, items) {
+        // Get current items in database
+        const currentItems = await this.getRoadmapItems(roadmapId);
+        const currentIds = new Set(currentItems.map(item => String(item.id)));
+        const newIds = new Set(items.map(item => String(item.id)));
+
+        // Delete items that are no longer in the array
+        for (const currentItem of currentItems) {
+            if (!newIds.has(String(currentItem.id))) {
+                console.log('Deleting removed item from database:', currentItem.id);
+                await this.deleteItem(currentItem.id);
+            }
+        }
+
+        // Save/update all items in the array
         for (const item of items) {
             await this.saveItem(roadmapId, item);
         }
+
         // Update roadmap's updated_at timestamp
         const now = new Date().toISOString();
         this.db.run('UPDATE roadmaps SET updated_at = ? WHERE id = ?', [now, roadmapId]);
