@@ -8,6 +8,7 @@ let dragStartX = 0;
 let dragType = null; // 'move', 'resize-start', 'resize-end'
 let workstreamOrder = {}; // Track custom workstream order
 let timelineExtensionDays = 0; // Extra days to extend timeline beyond last activity
+let fitToWidthMode = false; // Track if fit-to-width is enabled
 
 // Check if Firebase is initialized
 const useFirebase = typeof firebase !== 'undefined' && typeof db !== 'undefined';
@@ -386,43 +387,43 @@ async function initApp() {
     const fitToWidthBtn = document.getElementById('fitToWidthBtn');
     if (fitToWidthBtn) {
         fitToWidthBtn.addEventListener('click', () => {
-            const timelineCanvas = document.getElementById('timeline');
-            if (!timelineCanvas) return;
-
-            // Get the viewport width (container width)
-            const containerWidth = timelineCanvas.parentElement.clientWidth;
-
-            // Get timeline content width
-            const timelineContent = timelineCanvas.querySelector('.timeline-content');
-            if (!timelineContent) {
+            if (roadmapItems.length === 0) {
                 alert('Please add some activities or milestones first');
                 return;
             }
 
-            const contentWidth = timelineContent.scrollWidth;
+            // Toggle fit-to-width mode
+            fitToWidthMode = !fitToWidthMode;
 
-            // If content is wider than container, scale it to fit
-            if (contentWidth > containerWidth) {
-                const scale = (containerWidth - 40) / contentWidth; // 40px for padding
-                timelineCanvas.style.zoom = scale;
-                timelineCanvas.style.width = '100%';
+            if (fitToWidthMode) {
+                fitToWidthBtn.textContent = 'Exit Fit to Width';
+                fitToWidthBtn.classList.add('active');
             } else {
-                // Already fits, just center it
-                timelineCanvas.style.zoom = '1';
-                timelineCanvas.style.width = '100%';
+                fitToWidthBtn.textContent = 'Fit to Width';
+                fitToWidthBtn.classList.remove('active');
             }
+
+            // Re-render timeline with new mode
+            renderTimeline();
         });
     }
 
     // Reset timeline width button
     if (resetTimelineBtn) {
         resetTimelineBtn.addEventListener('click', () => {
-            // Reset zoom and extension
+            // Reset zoom and extension and fit-to-width mode
             const timelineCanvas = document.getElementById('timeline');
             if (timelineCanvas) {
                 timelineCanvas.style.zoom = '1';
                 timelineCanvas.style.width = '';
             }
+
+            fitToWidthMode = false;
+            if (fitToWidthBtn) {
+                fitToWidthBtn.textContent = 'Fit to Width';
+                fitToWidthBtn.classList.remove('active');
+            }
+
             timelineExtensionDays = 0;
             sessionStorage.removeItem('timelineExtensionDays');
             renderTimeline();
@@ -1089,10 +1090,22 @@ async function initApp() {
 
         // Calculate dimensions
         const totalDays = Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24)) + 1;
-        const pixelsPerDay = currentView === 'week' ? Math.max(30, 2400 / totalDays) :  // 30+ pixels per day for week view (doubled from 15)
-                            currentView === 'year' ? Math.max(1, 1200 / totalDays) :
-                            currentView === 'quarter' ? Math.max(2, 1200 / totalDays) :
-                            Math.max(3, 1200 / totalDays);
+
+        let pixelsPerDay;
+        if (fitToWidthMode) {
+            // In fit-to-width mode, calculate pixels per day to fit container width
+            const timelineCanvas = document.getElementById('timeline');
+            const containerWidth = timelineCanvas ? timelineCanvas.clientWidth : 1200;
+            const availableWidth = containerWidth - 300; // Leave room for workstream labels (250px) and padding
+            pixelsPerDay = Math.max(1, availableWidth / totalDays); // Minimum 1 pixel per day
+        } else {
+            // Normal mode - use existing logic
+            pixelsPerDay = currentView === 'week' ? Math.max(30, 2400 / totalDays) :  // 30+ pixels per day for week view (doubled from 15)
+                                currentView === 'year' ? Math.max(1, 1200 / totalDays) :
+                                currentView === 'quarter' ? Math.max(2, 1200 / totalDays) :
+                                Math.max(3, 1200 / totalDays);
+        }
+
         const timelineWidth = totalDays * pixelsPerDay;
 
         console.log('Timeline calculation:', {

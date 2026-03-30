@@ -133,6 +133,11 @@ textarea {
     box-shadow: 0 4px 8px rgba(72, 187, 120, 0.3);
 }
 
+.btn-secondary.active {
+    background: #2f855a;
+    box-shadow: 0 0 0 3px rgba(72, 187, 120, 0.3);
+}
+
 .btn-danger {
     background: #f56565;
     color: white;
