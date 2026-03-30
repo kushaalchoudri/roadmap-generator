@@ -1067,7 +1067,7 @@ textarea {
 
 .weekend-shade {
     position: absolute;
-    background: rgba(220, 220, 220, 0.15); /* Very light grey transparent overlay */
+    background: rgba(200, 200, 200, 0.3); /* Light grey transparent overlay */
     top: 0;
     bottom: 0;
     pointer-events: none;
