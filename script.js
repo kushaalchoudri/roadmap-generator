@@ -1093,11 +1093,11 @@ async function initApp() {
 
         let pixelsPerDay;
         if (fitToWidthMode) {
-            // In fit-to-width mode, calculate pixels per day to fit container width
-            const timelineCanvas = document.getElementById('timeline');
-            const containerWidth = timelineCanvas ? timelineCanvas.clientWidth : 1200;
-            const availableWidth = containerWidth - 300; // Leave room for workstream labels (250px) and padding
-            pixelsPerDay = Math.max(1, availableWidth / totalDays); // Minimum 1 pixel per day
+            // In fit-to-width mode, show weeks instead of days
+            // Each week takes the space of 3 normal days
+            const totalWeeks = Math.ceil(totalDays / 7);
+            const pixelsPer3Days = 3 * 3; // 3 days at 3 pixels per day = 9 pixels
+            pixelsPerDay = pixelsPer3Days / 7; // Divide by 7 to get pixels per day for weekly display
         } else {
             // Normal mode - use existing logic
             pixelsPerDay = currentView === 'week' ? Math.max(30, 2400 / totalDays) :  // 30+ pixels per day for week view (doubled from 15)
@@ -1129,53 +1129,71 @@ async function initApp() {
         html += '<div class="timeline-left-spacer"></div>';
         html += '<div class="timeline-months-wrapper" style="width: ' + timelineWidth + 'px; overflow: hidden;"><div class="timeline-months">';
 
-        periods.forEach(period => {
-            const width = period.days * pixelsPerDay;
-            html += `<div class="timeline-month" style="width: ${width}px; min-width: ${width}px;">`;
-            html += `<div class="timeline-month-header">${period.label}</div>`;
+        if (fitToWidthMode) {
+            // In fit-to-width mode, show week numbers instead of detailed period breakdown
+            let currentWeekStart = new Date(minDate);
+            while (currentWeekStart <= maxDate) {
+                const weekEnd = new Date(currentWeekStart);
+                weekEnd.setDate(weekEnd.getDate() + 6);
+                const weekNum = getWeekNumber(currentWeekStart);
+                const weekWidth = 7 * pixelsPerDay; // 7 days worth at compressed rate
 
-            // Show weeks in month view
-            if (currentView === 'month' && period.weeks) {
-                html += `<div class="timeline-weeks">`;
-                period.weeks.forEach(week => {
-                    html += `<div class="timeline-week">W${week.number}</div>`;
-                });
+                html += `<div class="timeline-month" style="width: ${weekWidth}px; min-width: ${weekWidth}px;">`;
+                html += `<div class="timeline-month-header" style="font-size: 11px;">CW${weekNum}</div>`;
                 html += `</div>`;
-            }
 
-            // Show weeks in quarter view
-            if (currentView === 'quarter' && period.weeks) {
-                html += `<div class="timeline-weeks" style="display: flex;">`;
-                period.weeks.forEach(week => {
-                    html += `<div class="timeline-week" style="flex: 1; font-size: 9px;">W${week.number}</div>`;
-                });
-                html += `</div>`;
+                currentWeekStart.setDate(currentWeekStart.getDate() + 7);
             }
+        } else {
+            // Normal mode - show periods as before
+            periods.forEach(period => {
+                const width = period.days * pixelsPerDay;
+                html += `<div class="timeline-month" style="width: ${width}px; min-width: ${width}px;">`;
+                html += `<div class="timeline-month-header">${period.label}</div>`;
 
-            // Show months in year view
-            if (currentView === 'year' && period.months) {
-                html += `<div class="timeline-weeks" style="display: flex;">`;
-                period.months.forEach(month => {
-                    html += `<div class="timeline-week" style="flex: 1; font-size: 9px;">${month.name}</div>`;
-                });
-                html += `</div>`;
-            }
-
-            // Show days in week view with actual dates
-            if (currentView === 'week' && period.days === 7) {
-                html += `<div class="timeline-weeks" style="display: flex;">`;
-                const weekStart = new Date(period.start);
-                for (let i = 0; i < 7; i++) {
-                    const dayDate = new Date(weekStart);
-                    dayDate.setDate(dayDate.getDate() + i);
-                    const dateStr = dayDate.getDate(); // Just the day number
-                    html += `<div class="timeline-week" style="flex: 1; font-size: 10px;">${dateStr}</div>`;
+                // Show weeks in month view
+                if (currentView === 'month' && period.weeks) {
+                    html += `<div class="timeline-weeks">`;
+                    period.weeks.forEach(week => {
+                        html += `<div class="timeline-week">W${week.number}</div>`;
+                    });
+                    html += `</div>`;
                 }
-                html += `</div>`;
-            }
 
-            html += `</div>`;
-        });
+                // Show weeks in quarter view
+                if (currentView === 'quarter' && period.weeks) {
+                    html += `<div class="timeline-weeks" style="display: flex;">`;
+                    period.weeks.forEach(week => {
+                        html += `<div class="timeline-week" style="flex: 1; font-size: 9px;">W${week.number}</div>`;
+                    });
+                    html += `</div>`;
+                }
+
+                // Show months in year view
+                if (currentView === 'year' && period.months) {
+                    html += `<div class="timeline-weeks" style="display: flex;">`;
+                    period.months.forEach(month => {
+                        html += `<div class="timeline-week" style="flex: 1; font-size: 9px;">${month.name}</div>`;
+                    });
+                    html += `</div>`;
+                }
+
+                // Show days in week view with actual dates
+                if (currentView === 'week' && period.days === 7) {
+                    html += `<div class="timeline-weeks" style="display: flex;">`;
+                    const weekStart = new Date(period.start);
+                    for (let i = 0; i < 7; i++) {
+                        const dayDate = new Date(weekStart);
+                        dayDate.setDate(dayDate.getDate() + i);
+                        const dateStr = dayDate.getDate(); // Just the day number
+                        html += `<div class="timeline-week" style="flex: 1; font-size: 10px;">${dateStr}</div>`;
+                    }
+                    html += `</div>`;
+                }
+
+                html += `</div>`;
+            });
+        }
 
         // Don't add extra padding - keep month headers aligned with timeline
         html += '</div></div></div>';
@@ -1186,17 +1204,20 @@ async function initApp() {
         // Add vertical lines and today marker - GLOBAL container spanning entire timeline
         let gridLinesHtml = '';
 
-        // Add weekend shading (Saturday and Sunday) - light grey
-        for (let day = 0; day <= totalDays; day++) {
-            const currentDate = new Date(minDate);
-            currentDate.setDate(currentDate.getDate() + day);
-            const dayOfWeek = currentDate.getDay();
+        // In fit-to-width mode, skip weekend shading and use weekly grid lines
+        if (!fitToWidthMode) {
+            // Add weekend shading (Saturday and Sunday) - light grey
+            for (let day = 0; day <= totalDays; day++) {
+                const currentDate = new Date(minDate);
+                currentDate.setDate(currentDate.getDate() + day);
+                const dayOfWeek = currentDate.getDay();
 
-            // 0 = Sunday, 6 = Saturday
-            if (dayOfWeek === 0 || dayOfWeek === 6) {
-                const dayLeft = day * pixelsPerDay;
-                const dayWidth = pixelsPerDay;
-                gridLinesHtml += `<div class="weekend-shade" style="left: ${dayLeft}px; width: ${dayWidth}px;"></div>`;
+                // 0 = Sunday, 6 = Saturday
+                if (dayOfWeek === 0 || dayOfWeek === 6) {
+                    const dayLeft = day * pixelsPerDay;
+                    const dayWidth = pixelsPerDay;
+                    gridLinesHtml += `<div class="weekend-shade" style="left: ${dayLeft}px; width: ${dayWidth}px;"></div>`;
+                }
             }
         }
 
@@ -1212,7 +1233,16 @@ async function initApp() {
         }
 
         // Add week/period lines based on view
-        if (currentView === 'week') {
+        if (fitToWidthMode) {
+            // Fit-to-width mode - show weekly gridlines
+            let currentWeekStart = new Date(minDate);
+            while (currentWeekStart <= maxDate) {
+                const weekStartDay = Math.ceil((currentWeekStart - minDate) / (1000 * 60 * 60 * 24));
+                const weekLeft = weekStartDay * pixelsPerDay;
+                gridLinesHtml += `<div class="week-line" style="left: ${weekLeft}px;"></div>`;
+                currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+            }
+        } else if (currentView === 'week') {
             // Week view - show daily gridlines
             for (let day = 0; day <= totalDays; day++) {
                 const currentDate = new Date(minDate);
