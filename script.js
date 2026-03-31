@@ -968,15 +968,27 @@ async function initApp() {
         const borderedContainer = timelineCanvas.querySelector('.timeline-bordered-container');
         if (!borderedContainer) return;
 
-        // Get viewport (visible area) and content dimensions
+        // Get the timeline content container that holds everything
+        const timelineContent = timelineCanvas.querySelector('.timeline-content');
+        if (!timelineContent) return;
+
+        // Get viewport (visible area) and scroll position
         const viewportWidth = timelineCanvas.clientWidth;
-        const contentWidth = borderedContainer.scrollWidth;
+        const scrollLeft = timelineCanvas.scrollLeft;
+        const contentWidth = timelineContent.scrollWidth;
 
-        // Zoom out should be disabled when entire roadmap fits in viewport
-        // (with some tolerance for padding/margins)
-        const fitsInViewport = contentWidth <= viewportWidth - 50;
+        // Calculate the position of the right edge of the bordered container
+        const borderedRect = borderedContainer.getBoundingClientRect();
+        const canvasRect = timelineCanvas.getBoundingClientRect();
 
-        if (fitsInViewport) {
+        // Right edge position relative to viewport
+        const rightEdgeInViewport = borderedRect.right - canvasRect.left;
+
+        // Zoom out should be disabled when the right border is at or to the left of the right edge of viewport
+        // Allow a small tolerance (10px) for rounding
+        const rightBorderVisible = rightEdgeInViewport <= viewportWidth + 10;
+
+        if (rightBorderVisible) {
             zoomOutBtn.disabled = true;
             zoomOutBtn.style.opacity = '0.4';
             zoomOutBtn.style.cursor = 'not-allowed';
