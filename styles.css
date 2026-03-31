@@ -1009,6 +1009,15 @@ textarea {
     top: 5px; /* General milestones in milestone section */
 }
 
+/* Milestone positioning for overlap avoidance */
+.timeline-milestone.milestone-above .milestone-label {
+    order: -1; /* Move label above diamond */
+}
+
+.timeline-milestone.milestone-below .milestone-label {
+    order: 1; /* Keep label below diamond (default) */
+}
+
 /* Activity bar - simple 2pt line design */
 .timeline-bar {
     position: absolute;
@@ -1143,6 +1152,23 @@ textarea {
     display: block !important;
     pointer-events: none !important;
     z-index: 5 !important;
+}
+
+/* Dates below bar for very short activities */
+.timeline-bar.dates-below .timeline-bar-start-date {
+    top: 38px !important; /* Below the bar */
+    transform: none !important;
+    left: 0 !important;
+    font-size: 10px !important;
+    color: #4b5563 !important; /* Grey color for below dates */
+}
+
+.timeline-bar.dates-below .timeline-bar-end-date {
+    top: 38px !important; /* Below the bar */
+    transform: none !important;
+    right: 0 !important;
+    font-size: 10px !important;
+    color: #4b5563 !important; /* Grey color for below dates */
 }
 
 /* Stacked dates for short activities - centered */

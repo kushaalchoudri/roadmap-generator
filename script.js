@@ -1358,22 +1358,28 @@ async function initApp() {
         } else if (currentView === 'weekly') {
             // Weekly view - show weekly gridlines
             let currentWeekStart = new Date(minDate);
-            while (currentWeekStart <= maxDate) {
+            let iterations = 0;
+            while (currentWeekStart <= maxDate && iterations < 500) {
                 const weekdaysFromStart = getWeekdayPosition(minDate, currentWeekStart);
-                const weekLeft = weekdaysFromStart * pixelsPerDay;
-                gridLinesHtml += `<div class="week-line" style="left: ${weekLeft}px;"></div>`;
+                if (weekdaysFromStart >= 0) {
+                    const weekLeft = weekdaysFromStart * pixelsPerDay;
+                    gridLinesHtml += `<div class="week-line" style="left: ${weekLeft}px;"></div>`;
+                }
                 currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+                iterations++;
             }
         } else if (currentView === 'monthly') {
             // Monthly view - show monthly gridlines
             let currentMonthStart = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
-            while (currentMonthStart <= maxDate) {
+            let iterations = 0;
+            while (currentMonthStart <= maxDate && iterations < 200) {
                 const weekdaysFromStart = getWeekdayPosition(minDate, currentMonthStart);
                 if (weekdaysFromStart >= 0) {
                     const monthLeft = weekdaysFromStart * pixelsPerDay;
                     gridLinesHtml += `<div class="week-line" style="left: ${monthLeft}px;"></div>`;
                 }
                 currentMonthStart.setMonth(currentMonthStart.getMonth() + 1);
+                iterations++;
             }
         } else if (currentView === 'quarterly') {
             // Quarterly view - show weekly gridlines (each column = 1 week of weekdays)
@@ -1441,13 +1447,30 @@ async function initApp() {
             html += `<div class="workstream-rows" style="min-height: 65px; position: relative;">`;
             // Gridlines are now in global container, not here
 
-            generalMilestones.forEach(item => {
+            generalMilestones.forEach((item, index) => {
                 const itemDate = parseLocalDate(item.date);
                 const weekdaysFromStart = getWeekdayPosition(minDate, itemDate);
                 const left = weekdaysFromStart * pixelsPerDay;
 
+                // Check for overlap with previous milestones
+                let positionClass = '';
+                if (index > 0) {
+                    const prevItem = generalMilestones[index - 1];
+                    const prevDate = parseLocalDate(prevItem.date);
+                    const prevWeekdays = getWeekdayPosition(minDate, prevDate);
+                    const prevLeft = prevWeekdays * pixelsPerDay;
+
+                    // If milestones are close (within 80px), alternate positioning
+                    if (Math.abs(left - prevLeft) < 80) {
+                        // Check if previous had alternate positioning
+                        const prevClass = prevItem._positionClass || '';
+                        positionClass = prevClass === 'milestone-below' ? 'milestone-above' : 'milestone-below';
+                    }
+                }
+                item._positionClass = positionClass;
+
                 html += `
-                    <div class="timeline-milestone general" style="left: ${left}px;" title="${escapeHtml(item.name)}\n${formatDate(item.date)}">
+                    <div class="timeline-milestone general ${positionClass}" style="left: ${left}px;" title="${escapeHtml(item.name)}\n${formatDate(item.date)}">
                         <div class="milestone-diamond"></div>
                         <div class="milestone-label">${escapeHtml(item.name)}</div>
                         <div class="milestone-date">${formatDateShort(item.date)}</div>
@@ -1485,14 +1508,31 @@ async function initApp() {
             html += `<div class="workstream-rows" style="position: relative;">`;
             // Gridlines are now in global container, not here
 
-            // Render milestones
-            milestones.forEach(item => {
+            // Render milestones with overlap detection
+            milestones.forEach((item, index) => {
                 const itemDate = parseLocalDate(item.date);
                 const weekdaysFromStart = getWeekdayPosition(minDate, itemDate);
                 const left = weekdaysFromStart * pixelsPerDay;
 
+                // Check for overlap with previous milestones
+                let positionClass = '';
+                if (index > 0) {
+                    const prevItem = milestones[index - 1];
+                    const prevDate = parseLocalDate(prevItem.date);
+                    const prevWeekdays = getWeekdayPosition(minDate, prevDate);
+                    const prevLeft = prevWeekdays * pixelsPerDay;
+
+                    // If milestones are close (within 80px), alternate positioning
+                    if (Math.abs(left - prevLeft) < 80) {
+                        // Check if previous had alternate positioning
+                        const prevClass = prevItem._positionClass || '';
+                        positionClass = prevClass === 'milestone-below' ? 'milestone-above' : 'milestone-below';
+                    }
+                }
+                item._positionClass = positionClass;
+
                 html += `
-                    <div class="timeline-milestone" style="left: ${left}px;" title="${escapeHtml(item.name)}\n${formatDate(item.date)}">
+                    <div class="timeline-milestone ${positionClass}" style="left: ${left}px;" title="${escapeHtml(item.name)}\n${formatDate(item.date)}">
                         <div class="milestone-diamond"></div>
                         <div class="milestone-label">${escapeHtml(item.name)}</div>
                         <div class="milestone-date">${formatDateShort(item.date)}</div>
@@ -1581,26 +1621,16 @@ async function initApp() {
                 let datePositionClass = '';
                 let dateDisplay = '';
 
-                if (activityDuration === 1) {
-                    // 1-day activity: show single date below, name above
-                    datePositionClass = 'single-day';
-                    dateDisplay = `<div class="timeline-bar-single-date">${startDateStr}</div>`;
-                } else if (activityDuration <= 3) {
-                    // Short activity (2-3 days): stack dates vertically, move name higher
-                    datePositionClass = 'stacked';
-                    dateDisplay = `
-                        <div class="timeline-bar-start-date">${startDateStr}</div>
-                        <div class="timeline-bar-end-date">${endDateStr}</div>
-                    `;
-                } else if (width < 100) {
-                    // Visually compressed activity: also stack to prevent overlap
-                    datePositionClass = 'stacked';
+                // Check if dates can fit inside the bar (need ~60px for two dates)
+                if (width < 60) {
+                    // Very short bar: show dates below the bar
+                    datePositionClass = 'dates-below';
                     dateDisplay = `
                         <div class="timeline-bar-start-date">${startDateStr}</div>
                         <div class="timeline-bar-end-date">${endDateStr}</div>
                     `;
                 } else {
-                    // Normal activity: dates on both ends below line
+                    // Normal activity: dates inside the bar
                     dateDisplay = `
                         <div class="timeline-bar-start-date">${startDateStr}</div>
                         <div class="timeline-bar-end-date">${endDateStr}</div>
