@@ -1567,8 +1567,8 @@ async function initApp() {
                 };
                 const lineColor = lineColors[status] || '#9ca3af';
 
-                // Detect activity duration for layout (based on actual days, not pixels)
-                const activityDuration = duration;
+                // Detect activity duration for layout (based on weekdays)
+                const activityDuration = durationWeekdays;
                 let datePositionClass = '';
                 let dateDisplay = '';
 
