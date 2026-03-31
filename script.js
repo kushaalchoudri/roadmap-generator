@@ -968,10 +968,10 @@ async function initApp() {
         spans.forEach(span => {
             const width = (span.endDay - span.startDay + 1) * pixelsPerDay;
             const label = labelFunc(span);
-            // Ensure minimum width of 30px for readability, use overflow handling for very small cells
-            const minWidth = Math.max(width, 20);
-            const fontSize = width < 30 ? '9px' : '11px';
-            html += `<div class="timeline-header-cell" style="width: ${width}px; min-width: ${minWidth}px; padding: 8px 2px; text-align: center; font-size: ${fontSize}; font-weight: 600; background: ${bgColor}; color: ${textColor}; border-right: 1px solid rgba(255,255,255,0.2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${label}</div>`;
+            // Ensure minimum width for readability - no min-width constraint, let it flow naturally
+            const fontSize = width < 40 ? '9px' : (width < 60 ? '10px' : '11px');
+            const padding = width < 30 ? '6px 1px' : '8px 4px';
+            html += `<div class="timeline-header-cell" style="width: ${width}px; min-width: ${width}px; padding: ${padding}; text-align: center; font-size: ${fontSize}; font-weight: 600; background: ${bgColor}; color: ${textColor}; border-right: 1px solid rgba(255,255,255,0.2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${label}</div>`;
         });
         html += '</div>';
         return html;
@@ -1236,11 +1236,24 @@ async function initApp() {
         let displayMode = 'days'; // 'days', 'weeks', 'months'
 
         // Base pixels per day for each view
-        let basePixelsPerDay = currentView === 'daily' ? Math.max(30, 2400 / totalDays) :
-                               currentView === 'weekly' ? Math.max(15, 1800 / totalDays) :
-                               currentView === 'monthly' ? Math.max(3, 1200 / totalDays) :
-                               currentView === 'quarterly' ? Math.max(2, 1200 / totalDays) :
-                               Math.max(1, 1200 / totalDays); // yearly
+        // Quarter view: 1 week per column = 7 days should take reasonable space
+        // Year view: 1 quarter per column = ~90 days should take reasonable space
+        let basePixelsPerDay;
+        if (currentView === 'daily') {
+            basePixelsPerDay = Math.max(30, 2400 / totalDays);
+        } else if (currentView === 'weekly') {
+            basePixelsPerDay = Math.max(15, 1800 / totalDays);
+        } else if (currentView === 'monthly') {
+            basePixelsPerDay = Math.max(3, 1200 / totalDays);
+        } else if (currentView === 'quarterly') {
+            // Each week should be a visible column: 7 days = ~50-70 pixels
+            // So approximately 7-10 pixels per day
+            basePixelsPerDay = Math.max(7, 2100 / totalDays);
+        } else { // yearly
+            // Each quarter should be a visible column: ~90 days = ~50-70 pixels
+            // So approximately 0.5-0.8 pixels per day
+            basePixelsPerDay = Math.max(0.6, 1800 / totalDays);
+        }
 
         // Apply zoom level
         // Zoom level ranges from -5 (most zoomed out) to +3 (most zoomed in)
@@ -1351,8 +1364,26 @@ async function initApp() {
                 }
                 currentMonthStart.setMonth(currentMonthStart.getMonth() + 1);
             }
-        } else {
-            // For quarterly and yearly view, show quarter start lines
+        } else if (currentView === 'quarterly') {
+            // Quarterly view - show weekly gridlines (each column = 1 week)
+            let currentWeekStart = new Date(minDate);
+            // Align to Monday
+            const dayOfWeek = currentWeekStart.getDay();
+            const daysToMonday = dayOfWeek === 0 ? 1 : (dayOfWeek === 1 ? 0 : (8 - dayOfWeek));
+            if (daysToMonday > 0) {
+                currentWeekStart.setDate(currentWeekStart.getDate() + daysToMonday);
+            }
+
+            while (currentWeekStart <= maxDate) {
+                const weekStartDay = Math.ceil((currentWeekStart - minDate) / (1000 * 60 * 60 * 24));
+                const weekLeft = weekStartDay * pixelsPerDay;
+                if (weekStartDay >= 0) {
+                    gridLinesHtml += `<div class="week-line" style="left: ${weekLeft}px;"></div>`;
+                }
+                currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+            }
+        } else { // yearly
+            // Yearly view - show quarterly gridlines (each column = 1 quarter)
             let currentQuarterStart = new Date(minDate.getFullYear(), Math.floor(minDate.getMonth() / 3) * 3, 1);
             while (currentQuarterStart <= maxDate) {
                 const quarterStartDay = Math.ceil((currentQuarterStart - minDate) / (1000 * 60 * 60 * 24));
