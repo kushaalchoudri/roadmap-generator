@@ -1535,11 +1535,12 @@ async function initApp() {
                             const prevVisualWidth = prevWidth + textPadding;
 
                             // Check for visual overlap (including text)
-                            // Add 1px gap to ensure no touching when dates are adjacent
+                            // Add small gap (5px) to ensure no touching when dates are adjacent
                             const currentEnd = left + visualWidth;
                             const prevEnd = prevLeft + prevVisualWidth;
+                            const gap = 5; // 5px gap between activities
 
-                            if (!(left > prevEnd || currentEnd < prevLeft)) {
+                            if (!(left >= prevEnd + gap || currentEnd <= prevLeft - gap)) {
                                 canFit = false;
                                 break;
                             }
@@ -1551,6 +1552,12 @@ async function initApp() {
                         foundRow = true;
                     } else {
                         rowIndex++;
+                        // Safety check to prevent infinite loop
+                        if (rowIndex > 100) {
+                            console.error('Too many rows needed for activity placement');
+                            item.assignedRow = rowIndex;
+                            foundRow = true;
+                        }
                     }
                 }
 
