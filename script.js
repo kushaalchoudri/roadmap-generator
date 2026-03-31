@@ -1247,6 +1247,12 @@ async function initApp() {
         }
         const totalDays = totalWeekdays;
 
+        console.log('Weekday calculation:', {
+            minDate: minDate.toISOString(),
+            maxDate: maxDate.toISOString(),
+            totalWeekdays: totalWeekdays
+        });
+
         let pixelsPerDay;
         let displayMode = 'days'; // 'days', 'weeks', 'months'
 
@@ -2290,20 +2296,6 @@ function countWeekdays(startDate, endDate) {
         current.setDate(current.getDate() + 1);
     }
     return count;
-}
-
-// Get weekday position (excluding weekends) from start date
-function getWeekdayPosition(startDate, targetDate) {
-    let position = 0;
-    const current = new Date(startDate);
-    while (current < targetDate) {
-        const dayOfWeek = current.getDay();
-        if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Not weekend
-            position++;
-        }
-        current.setDate(current.getDate() + 1);
-    }
-    return position;
 }
 
 // Get weekday position (excluding weekends) from start date
