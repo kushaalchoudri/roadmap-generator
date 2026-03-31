@@ -1038,10 +1038,10 @@ textarea {
 /* Activity description above the line in black */
 .timeline-bar-description {
     position: absolute;
-    top: 0;
+    top: -2px; /* Position immediately above the bar with no gap */
     left: 50%;
     transform: translateX(-50%);
-    font-size: 12px; /* Increased from 11px */
+    font-size: 12px; /* Same font size for all views */
     font-weight: 600;
     color: #000;
     white-space: nowrap;
@@ -1115,7 +1115,7 @@ textarea {
     pointer-events: none !important;
 }
 
-/* Start date - positioned below the line start */
+/* Start date - positioned inside the line start, centered vertically */
 .timeline-bar-start-date {
     position: absolute !important;
     left: 5px !important;
@@ -1130,7 +1130,7 @@ textarea {
     z-index: 5 !important;
 }
 
-/* End date - positioned inside the line end */
+/* End date - positioned inside the line end, centered vertically */
 .timeline-bar-end-date {
     position: absolute !important;
     right: 5px !important;
@@ -1145,26 +1145,28 @@ textarea {
     z-index: 5 !important;
 }
 
-/* Stacked dates for short activities */
+/* Stacked dates for short activities - centered */
 .timeline-bar.stacked .timeline-bar-description {
-    top: -12px !important; /* Move name much higher for short activities to avoid overlap with start date */
-    font-size: 10px !important; /* Slightly smaller font to reduce overlap */
+    top: -2px !important; /* Keep same position immediately above bar */
+    font-size: 12px !important; /* Same font size */
 }
 
 .timeline-bar.stacked .timeline-bar-start-date {
-    top: 2px !important; /* Above the line */
-    font-size: 9px !important; /* Smaller for compressed activities */
+    top: 50% !important; /* Center vertically */
+    transform: translateY(-50%) !important;
+    font-size: 10px !important;
 }
 
 .timeline-bar.stacked .timeline-bar-end-date {
-    top: 38px !important; /* Below the line - adjusted for thicker activity bar */
-    font-size: 9px !important; /* Smaller for compressed activities */
+    top: 50% !important; /* Center vertically */
+    transform: translateY(-50%) !important;
+    font-size: 10px !important;
 }
 
-/* Single day activity - show one date centered below line */
+/* Single day activity - centered date */
 .timeline-bar.single-day .timeline-bar-description {
-    top: -12px !important; /* Move name much higher to avoid overlap */
-    font-size: 10px !important; /* Slightly smaller */
+    top: -2px !important; /* Keep same position immediately above bar */
+    font-size: 12px !important; /* Same font size */
 }
 
 .timeline-bar-single-date {
@@ -1185,11 +1187,11 @@ textarea {
 .week-line {
     position: absolute;
     width: 1px;
-    background: linear-gradient(to bottom, transparent 0%, transparent 15%, #d1d5db 15%, #d1d5db 85%, transparent 85%, transparent 100%);
+    background: #d1d5db; /* Solid grey line */
     top: 0;
     bottom: 0;
     pointer-events: none;
-    z-index: 1;
+    z-index: 0; /* Behind activity bars */
     opacity: 0.4;
 }
 
@@ -1201,7 +1203,7 @@ textarea {
     bottom: 0;
     pointer-events: none;
     z-index: 0; /* Behind activity bars (activity bars are z-index: 3) */
-    opacity: 0.5;
+    opacity: 0.6;
 }
 
 .weekend-shade {

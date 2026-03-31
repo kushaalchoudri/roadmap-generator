@@ -1429,7 +1429,7 @@ async function initApp() {
         }
 
         // Add global gridlines container that spans entire timeline height
-        html += `<div class="timeline-gridlines-container" style="position: absolute; top: 0; left: 200px; right: 0; bottom: 0; pointer-events: none; z-index: 1;">`;
+        html += `<div class="timeline-gridlines-container" style="position: absolute; top: 0; left: 200px; right: 0; bottom: 0; pointer-events: none; z-index: 0;">`;
         html += gridLinesHtml;
         html += `</div>`;
 
