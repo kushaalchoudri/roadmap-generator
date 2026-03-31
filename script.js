@@ -960,9 +960,11 @@ async function initApp() {
                 if (canShowWeeks) html += renderHeaderRow(weekSpans, pixelsPerDay, span => `W${span.weekNum}`, '#4299e1', 'white', 'Calendar Week');
             } else if (currentView === 'monthly') {
                 // 3 rows: Year, Quarter, Month
+                // For monthly view, ALWAYS show months even if compressed (it's the primary level)
                 if (canShowYears) html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white', 'Year');
                 if (canShowQuarters) html += renderHeaderRow(quarterSpans, pixelsPerDay, span => `Q${span.quarter}`, '#764ba2', 'white', 'Quarter');
-                if (canShowMonths) html += renderHeaderRow(monthSpans, pixelsPerDay, span => span.monthName, '#48bb78', 'white', 'Month');
+                // Always show months in monthly view regardless of width
+                if (monthSpans.length > 0) html += renderHeaderRow(monthSpans, pixelsPerDay, span => span.monthName, '#48bb78', 'white', 'Month');
             } else if (currentView === 'quarterly') {
                 // 2 rows: Year, Quarter
                 if (canShowYears) html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white', 'Year');
