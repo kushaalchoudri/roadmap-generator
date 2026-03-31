@@ -1593,8 +1593,8 @@ async function initApp() {
                 const left = weekdaysFromStart * pixelsPerDay;
                 const width = durationWeekdays * pixelsPerDay;
 
-                // Calculate text width estimates (approximate) - increased padding for better spacing
-                const textPadding = 180; // Extra space for start/end dates and label (increased from 120)
+                // Calculate text width estimates (approximate) - reduced for better space utilization
+                const textPadding = 100; // Extra space for start/end dates and label (reduced from 180)
                 const visualWidth = width + textPadding;
 
                 // Find non-overlapping row
@@ -1663,7 +1663,7 @@ async function initApp() {
 
                 // Add extra offset if overlapping with milestone
                 const milestoneOffset = hasOverlapWithMilestone ? 40 : 0;
-                const top = milestoneHeight + (item.assignedRow * 70) + 30 + milestoneOffset; // Add offset if overlapping milestone
+                const top = milestoneHeight + (item.assignedRow * 55) + 20 + milestoneOffset; // Reduced row spacing from 70 to 55, and offset from 30 to 20
                 const status = item.status || 'not-started';
                 const startDateStr = formatDateShort(item.startDate);
                 const endDateStr = formatDateShort(item.endDate);
@@ -1713,7 +1713,7 @@ async function initApp() {
             });
 
             const maxRow = Math.max(...activities.map(a => a.assignedRow || 0), -1) + 1;
-            const totalActivityHeight = maxRow * 70; // Updated to match new spacing
+            const totalActivityHeight = maxRow * 55; // Reduced from 70 to 55 for better space utilization
             const maxMilestoneRow = milestones.length > 0 ? Math.max(...milestones.map(m => m._row || 0), 0) : 0;
             const milestoneHeight = milestones.length > 0 ? (75 + maxMilestoneRow * 40) : 0; // Increased for wrapped text
 
@@ -1741,10 +1741,10 @@ async function initApp() {
                 }
             });
 
-            const barHeight = 40; // Height of activity bar (increased from 24)
-            const labelAboveHeight = 20; // Height of label when positioned above bar
-            const dateBelowHeight = 20; // Additional space for dates below bars
-            const bottomPadding = 50; // Extra padding to prevent bars touching border
+            const barHeight = 35; // Height of activity bar (reduced from 40)
+            const labelAboveHeight = 15; // Height of label when positioned above bar (reduced from 20)
+            const dateBelowHeight = 15; // Additional space for dates below bars (reduced from 20)
+            const bottomPadding = 30; // Extra padding to prevent bars touching border (reduced from 50)
             const minHeight = Math.max(milestoneHeight + totalActivityHeight + barHeight + labelAboveHeight + dateBelowHeight + maxMilestoneOffset + bottomPadding, 100);
 
             html += `</div>`;
@@ -1775,9 +1775,9 @@ async function initApp() {
             const activities = items.filter(i => i.type === 'activity');
 
             const maxRow = activities.length > 0 ? Math.max(...activities.map(a => a.assignedRow || 0), -1) + 1 : 0;
-            const totalActivityHeight = maxRow * 70; // Match the spacing used in rendering
+            const totalActivityHeight = maxRow * 55; // Match the reduced spacing (55 instead of 70)
             const milestoneHeight = milestones.length > 0 ? 65 : 0;
-            const workstreamHeight = Math.max(milestoneHeight + totalActivityHeight + 84, 100); // Added extra padding
+            const workstreamHeight = Math.max(milestoneHeight + totalActivityHeight + 60, 100); // Reduced padding from 84 to 60
             totalTimelineHeight += workstreamHeight;
         });
 
