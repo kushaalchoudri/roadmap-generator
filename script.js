@@ -984,19 +984,20 @@ async function initApp() {
 
     // Enhanced renderTimeline function with drag-and-drop, view modes, today marker, and smart positioning
     function renderTimeline() {
-        console.log('renderTimeline called with view:', currentView);
+        try {
+            console.log('renderTimeline called with view:', currentView);
 
-        if (roadmapItems.length === 0) {
-            timelineCanvas.innerHTML = `
-                <div class="empty-state">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <p>Add activities and milestones to see your project timeline</p>
-                </div>
-            `;
-            return;
-        }
+            if (roadmapItems.length === 0) {
+                timelineCanvas.innerHTML = `
+                    <div class="empty-state">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <p>Add activities and milestones to see your project timeline</p>
+                    </div>
+                `;
+                return;
+            }
 
         // Calculate timeline range
         const allDates = [];
@@ -1672,6 +1673,15 @@ async function initApp() {
 
         // Add workstream resize functionality
         initWorkstreamResize();
+        } catch (error) {
+            console.error('Error in renderTimeline:', error);
+            timelineCanvas.innerHTML = `
+                <div class="empty-state">
+                    <p style="color: red;">Error rendering timeline: ${error.message}</p>
+                    <p>Check console for details</p>
+                </div>
+            `;
+        }
     }
 
     // Initialize drag-and-drop for timeline bars
@@ -2306,13 +2316,22 @@ function getWeekdayPosition(startDate, targetDate) {
     const target = new Date(targetDate);
     target.setHours(0, 0, 0, 0);
 
-    while (current < target) {
+    let iterations = 0;
+    const maxIterations = 10000; // Safety limit
+
+    while (current < target && iterations < maxIterations) {
         const dayOfWeek = current.getDay();
         if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Not weekend
             position++;
         }
         current.setDate(current.getDate() + 1);
+        iterations++;
     }
+
+    if (iterations >= maxIterations) {
+        console.error('getWeekdayPosition: Max iterations reached', startDate, targetDate);
+    }
+
     return position;
 }
 
@@ -2324,13 +2343,22 @@ function countWeekdays(startDate, endDate) {
     const end = new Date(endDate);
     end.setHours(0, 0, 0, 0);
 
-    while (current <= end) {
+    let iterations = 0;
+    const maxIterations = 10000; // Safety limit
+
+    while (current <= end && iterations < maxIterations) {
         const dayOfWeek = current.getDay();
         if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Not weekend
             count++;
         }
         current.setDate(current.getDate() + 1);
+        iterations++;
     }
+
+    if (iterations >= maxIterations) {
+        console.error('countWeekdays: Max iterations reached', startDate, endDate);
+    }
+
     return count;
 }
 
