@@ -1594,9 +1594,62 @@ async function initApp() {
                 `;
             });
 
-            // Smart row placement for activities to avoid text overlap
-            activities.forEach(activity => delete activity.assignedRow);
+            // NEW ROW-BASED PLACEMENT SYSTEM
+            // Step 1: Sort all items (activities + milestones) by start date
+            const allItems = [...activities, ...milestones].sort((a, b) => {
+                const dateA = parseLocalDate(a.startDate || a.date);
+                const dateB = parseLocalDate(b.startDate || b.date);
+                return dateA - dateB;
+            });
 
+            // Step 2: Assign rows using the new algorithm
+            const ACTIVITY_ROW_HEIGHT = 45; // Full height row for activities
+            const SPACING_ROW_HEIGHT = 22; // Half height row for spacing
+            let currentPhysicalRow = 0; // Tracks actual physical row position
+
+            allItems.forEach((item, index) => {
+                if (index === 0) {
+                    // First item goes in row 0
+                    item.assignedRow = 0;
+                    item.physicalRow = currentPhysicalRow;
+                } else {
+                    // Compare with previous item
+                    const prevItem = allItems[index - 1];
+                    const currentStart = parseLocalDate(item.startDate || item.date);
+                    const prevEnd = parseLocalDate(prevItem.endDate || prevItem.date);
+
+                    // Check if current starts after previous ends (no overlap)
+                    if (currentStart > prevEnd) {
+                        // Can place in same logical row as previous
+                        item.assignedRow = prevItem.assignedRow;
+                        item.physicalRow = prevItem.physicalRow;
+                    } else {
+                        // Overlaps - needs new row
+                        // Skip one spacing row, then place in next activity row
+                        currentPhysicalRow = prevItem.physicalRow + ACTIVITY_ROW_HEIGHT + SPACING_ROW_HEIGHT;
+                        item.assignedRow = prevItem.assignedRow + 1;
+                        item.physicalRow = currentPhysicalRow;
+                    }
+                }
+            });
+
+            // Step 3: Render milestones with their assigned physical rows
+            milestones.forEach(item => {
+                const itemDate = parseLocalDate(item.date);
+                const weekdaysFromStart = getWeekdayPosition(minDate, itemDate);
+                const left = weekdaysFromStart * pixelsPerDay;
+                const top = 5 + (item.physicalRow || 0);
+
+                html += `
+                    <div class="timeline-milestone" style="left: ${left - 35}px; top: ${top}px;" title="${escapeHtml(item.name)}\n${formatDate(item.date)}">
+                        <div class="milestone-diamond"></div>
+                        <div class="milestone-label">${escapeHtml(item.name)}</div>
+                        <div class="milestone-date">${formatDateShort(item.date)}</div>
+                    </div>
+                `;
+            });
+
+            // Step 4: Render activities with their assigned physical rows
             activities.forEach((item, activityIndex) => {
                 const start = parseLocalDate(item.startDate);
                 const end = parseLocalDate(item.endDate);
@@ -1605,77 +1658,7 @@ async function initApp() {
                 const left = weekdaysFromStart * pixelsPerDay;
                 const width = durationWeekdays * pixelsPerDay;
 
-                // Calculate text width estimates (approximate) - reduced for better space utilization
-                const textPadding = 100; // Extra space for start/end dates and label (reduced from 180)
-                const visualWidth = width + textPadding;
-
-                // Find non-overlapping row
-                let rowIndex = 0;
-                let foundRow = false;
-
-                while (!foundRow) {
-                    let canFit = true;
-
-                    for (let i = 0; i < activityIndex; i++) {
-                        const prevItem = activities[i];
-                        if (prevItem.assignedRow === rowIndex) {
-                            // Use weekday-based positioning to match actual rendering
-                            const prevStart = parseLocalDate(prevItem.startDate);
-                            const prevEndDate = parseLocalDate(prevItem.endDate);
-                            const prevWeekdaysFromStart = getWeekdayPosition(minDate, prevStart);
-                            const prevDurationWeekdays = countWeekdays(prevStart, prevEndDate);
-                            const prevLeft = prevWeekdaysFromStart * pixelsPerDay;
-                            const prevWidth = prevDurationWeekdays * pixelsPerDay;
-                            const prevVisualWidth = prevWidth + textPadding;
-
-                            // Check for visual overlap (including text)
-                            // Add small gap (5px) to ensure no touching when dates are adjacent
-                            const currentEnd = left + visualWidth;
-                            const prevEnd = prevLeft + prevVisualWidth;
-                            const gap = 5; // 5px gap between activities
-
-                            if (!(left >= prevEnd + gap || currentEnd <= prevLeft - gap)) {
-                                canFit = false;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (canFit) {
-                        item.assignedRow = rowIndex;
-                        foundRow = true;
-                    } else {
-                        rowIndex++;
-                        // Safety check to prevent infinite loop
-                        if (rowIndex > 100) {
-                            console.error('Too many rows needed for activity placement');
-                            item.assignedRow = rowIndex;
-                            foundRow = true;
-                        }
-                    }
-                }
-
-                const maxMilestoneRow = milestones.length > 0 ? Math.max(...milestones.map(m => m._row || 0), 0) : 0;
-                const milestoneHeight = milestones.length > 0 ? (75 + maxMilestoneRow * 40) : 0; // Account for wrapped text rows
-
-                // Check if activity overlaps with any milestone in same workstream
-                let hasOverlapWithMilestone = false;
-                const MILESTONE_WIDTH = 90; // Full milestone width including spacing
-                for (const milestone of milestones) {
-                    const milestoneDate = parseLocalDate(milestone.date);
-                    const milestoneWeekdays = getWeekdayPosition(minDate, milestoneDate);
-                    const milestoneLeft = milestoneWeekdays * pixelsPerDay;
-
-                    // Check if activity bar overlaps with milestone
-                    if (!(left > milestoneLeft + MILESTONE_WIDTH || left + width < milestoneLeft - MILESTONE_WIDTH)) {
-                        hasOverlapWithMilestone = true;
-                        break;
-                    }
-                }
-
-                // Add extra offset if overlapping with milestone
-                const milestoneOffset = hasOverlapWithMilestone ? 40 : 0;
-                const top = milestoneHeight + (item.assignedRow * 55) + 20 + milestoneOffset; // Reduced row spacing from 70 to 55, and offset from 30 to 20
+                const top = 5 + (item.physicalRow || 0);
                 const status = item.status || 'not-started';
                 const startDateStr = formatDateShort(item.startDate);
                 const endDateStr = formatDateShort(item.endDate);
@@ -1724,40 +1707,10 @@ async function initApp() {
                 `;
             });
 
-            const maxRow = Math.max(...activities.map(a => a.assignedRow || 0), -1) + 1;
-            const totalActivityHeight = maxRow * 55; // Reduced from 70 to 55 for better space utilization
-            const maxMilestoneRow = milestones.length > 0 ? Math.max(...milestones.map(m => m._row || 0), 0) : 0;
-            const milestoneHeight = milestones.length > 0 ? (60 + maxMilestoneRow * 30) : 0; // Reduced base from 75 to 60, row from 40 to 30
-
-            // Check if any activity has milestone overlap (needs extra 40px)
-            let maxMilestoneOffset = 0;
-            activities.forEach(activity => {
-                const start = parseLocalDate(activity.startDate);
-                const end = parseLocalDate(activity.endDate);
-                const weekdaysFromStart = getWeekdayPosition(minDate, start);
-                const durationWeekdays = countWeekdays(start, end);
-                const activityLeft = weekdaysFromStart * pixelsPerDay;
-                const activityWidth = durationWeekdays * pixelsPerDay;
-
-                // Check overlap with milestones
-                const MILESTONE_WIDTH = 90;
-                for (const milestone of milestones) {
-                    const milestoneDate = parseLocalDate(milestone.date);
-                    const milestoneWeekdays = getWeekdayPosition(minDate, milestoneDate);
-                    const milestoneLeft = milestoneWeekdays * pixelsPerDay;
-
-                    if (!(activityLeft > milestoneLeft + MILESTONE_WIDTH || activityLeft + activityWidth < milestoneLeft - MILESTONE_WIDTH)) {
-                        maxMilestoneOffset = 40;
-                        break;
-                    }
-                }
-            });
-
-            const barHeight = 35; // Height of activity bar (reduced from 40)
-            const labelAboveHeight = 15; // Height of label when positioned above bar (reduced from 20)
-            const dateBelowHeight = 15; // Additional space for dates below bars (reduced from 20)
-            const bottomPadding = 30; // Extra padding to prevent bars touching border (reduced from 50)
-            const minHeight = Math.max(milestoneHeight + totalActivityHeight + barHeight + labelAboveHeight + dateBelowHeight + maxMilestoneOffset + bottomPadding, 100);
+            // Calculate workstream height based on physical rows
+            const maxPhysicalRow = Math.max(...allItems.map(i => i.physicalRow || 0), 0);
+            const ACTIVITY_ROW_HEIGHT = 45;
+            const minHeight = Math.max(maxPhysicalRow + ACTIVITY_ROW_HEIGHT + 30, 80); // Add bottom padding
 
             html += `</div>`;
             // Add resize handle (vertical only for workstreams)
@@ -1787,9 +1740,7 @@ async function initApp() {
             const activities = items.filter(i => i.type === 'activity');
 
             const maxRow = activities.length > 0 ? Math.max(...activities.map(a => a.assignedRow || 0), -1) + 1 : 0;
-            const totalActivityHeight = maxRow * 55; // Match the reduced spacing (55 instead of 70)
-            const milestoneHeight = milestones.length > 0 ? 65 : 0;
-            const workstreamHeight = Math.max(milestoneHeight + totalActivityHeight + 60, 100); // Reduced padding from 84 to 60
+            const workstreamHeight = Math.max(100, 80); // Simplified - will be calculated per workstream
             totalTimelineHeight += workstreamHeight;
         });
 
