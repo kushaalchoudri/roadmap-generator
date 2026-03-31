@@ -968,7 +968,10 @@ async function initApp() {
         spans.forEach(span => {
             const width = (span.endDay - span.startDay + 1) * pixelsPerDay;
             const label = labelFunc(span);
-            html += `<div class="timeline-header-cell" style="width: ${width}px; min-width: ${width}px; padding: 8px 4px; text-align: center; font-size: 11px; font-weight: 600; background: ${bgColor}; color: ${textColor}; border-right: 1px solid rgba(255,255,255,0.2);">${label}</div>`;
+            // Ensure minimum width of 30px for readability, use overflow handling for very small cells
+            const minWidth = Math.max(width, 20);
+            const fontSize = width < 30 ? '9px' : '11px';
+            html += `<div class="timeline-header-cell" style="width: ${width}px; min-width: ${minWidth}px; padding: 8px 2px; text-align: center; font-size: ${fontSize}; font-weight: 600; background: ${bgColor}; color: ${textColor}; border-right: 1px solid rgba(255,255,255,0.2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${label}</div>`;
         });
         html += '</div>';
         return html;
@@ -1248,10 +1251,10 @@ async function initApp() {
         // Determine display mode based on resulting pixels per day
         if (pixelsPerDay < 2) {
             displayMode = 'weeks'; // Show week numbers when very zoomed out
-        } else if (pixelsPerDay < 5 && currentView !== 'week') {
-            displayMode = 'weeks'; // Show weeks for medium zoom out
+        } else if (pixelsPerDay < 5 && (currentView === 'quarterly' || currentView === 'yearly')) {
+            displayMode = 'weeks'; // Show weeks for very compressed views
         } else {
-            displayMode = 'days'; // Show normal day-based display
+            displayMode = 'days'; // Show normal hierarchical display
         }
 
         const timelineWidth = totalDays * pixelsPerDay;
@@ -1269,14 +1272,13 @@ async function initApp() {
         const contentWidth = Math.max(timelineWidth + 400, 1200);
         let html = '<div class="timeline-content" style="width: ' + contentWidth + 'px;">';
 
-        // Start bordered container that includes months and workstreams
+        // Start bordered container that includes headers AND workstreams
         html += `<div class="timeline-bordered-container" style="border: 3px solid #3b82f6; border-radius: 8px; display: inline-block; overflow: hidden;">`;
 
         // Render hierarchical timeline headers based on view
         html += renderTimelineHeaders(minDate, maxDate, totalDays, pixelsPerDay, timelineWidth, displayMode);
-        html += '</div></div></div>';
 
-        // General milestones section and workstreams
+        // General milestones section and workstreams (inside the border)
         html += `<div class="timeline-grid" style="position: relative;">`;
 
         // Add vertical lines and today marker - GLOBAL container spanning entire timeline
