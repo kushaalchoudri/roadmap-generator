@@ -1709,7 +1709,6 @@ async function initApp() {
 
             // Calculate workstream height based on physical rows
             const maxPhysicalRow = Math.max(...allItems.map(i => i.physicalRow || 0), 0);
-            const ACTIVITY_ROW_HEIGHT = 45;
             const minHeight = Math.max(maxPhysicalRow + ACTIVITY_ROW_HEIGHT + 30, 80); // Add bottom padding
 
             html += `</div>`;
