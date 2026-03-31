@@ -1222,15 +1222,20 @@ async function initApp() {
                         workstreams[item.workstream] = [];
                     }
                     workstreams[item.workstream].push(milestoneItem);
+                    console.log(`Milestone "${item.name}" -> Workstream "${item.workstream}"`);
                 } else {
                     generalMilestones.push(milestoneItem);
+                    console.log(`Milestone "${item.name}" -> General Milestones (no workstream)`);
                 }
             } else if (item.type === 'activity' && item.startDate && item.endDate) {
-                if (!item.workstream) return;
+                if (!item.workstream) {
+                    console.warn(`Activity "${item.name}" has no workstream - skipping`);
+                    return;
+                }
                 if (!workstreams[item.workstream]) {
                     workstreams[item.workstream] = [];
                 }
-                console.log('Adding activity to timeline:', item.name, 'Start:', item.startDate, 'End:', item.endDate);
+                console.log(`Activity "${item.name}" -> Workstream "${item.workstream}" (${item.startDate} to ${item.endDate})`);
                 workstreams[item.workstream].push(item);
             }
         });
@@ -1522,6 +1527,13 @@ async function initApp() {
             const items = workstreams[workstreamName];
             const milestones = items.filter(i => i.type === 'milestone');
             const activities = items.filter(i => i.type === 'activity');
+
+            console.log(`Rendering workstream "${workstreamName}":`, {
+                totalItems: items.length,
+                milestones: milestones.length,
+                activities: activities.length,
+                activityNames: activities.map(a => a.name)
+            });
 
             html += `<div class="timeline-workstream" data-workstream-name="${escapeHtml(workstreamName)}">`;
             html += `<div class="workstream-header">
