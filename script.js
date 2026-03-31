@@ -953,9 +953,9 @@ async function initApp() {
                 html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white');
                 html += renderHeaderRow(quarterSpans, pixelsPerDay, span => `Q${span.quarter}`, '#764ba2', 'white');
             } else if (currentView === 'yearly') {
-                // 2 rows: Year, Month
+                // 2 rows: Year, Quarter (each quarter is a column)
                 html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white');
-                html += renderHeaderRow(monthSpans, pixelsPerDay, span => span.monthName, '#48bb78', 'white');
+                html += renderHeaderRow(quarterSpans, pixelsPerDay, span => `Q${span.quarter}`, '#764ba2', 'white');
             }
         }
 
