@@ -2,7 +2,7 @@
 let roadmapItems = [];
 let appInitialized = false;
 let currentRoadmapId = null;
-let currentView = 'week'; // Default to 'week' view
+let currentView = 'daily'; // Default to 'daily' view
 let draggedItem = null;
 let dragStartX = 0;
 let dragType = null; // 'move', 'resize-start', 'resize-end'
@@ -262,10 +262,11 @@ async function initApp() {
     const resetTimelineBtn = document.getElementById('resetTimelineBtn');
 
     // View toggle buttons
-    const viewWeekBtn = document.getElementById('viewWeekBtn');
-    const viewMonthBtn = document.getElementById('viewMonthBtn');
-    const viewQuarterBtn = document.getElementById('viewQuarterBtn');
-    const viewYearBtn = document.getElementById('viewYearBtn');
+    const viewDailyBtn = document.getElementById('viewDailyBtn');
+    const viewWeeklyBtn = document.getElementById('viewWeeklyBtn');
+    const viewMonthlyBtn = document.getElementById('viewMonthlyBtn');
+    const viewQuarterlyBtn = document.getElementById('viewQuarterlyBtn');
+    const viewYearlyBtn = document.getElementById('viewYearlyBtn');
 
     // Set roadmap name
     currentRoadmapName.textContent = roadmap.name;
@@ -436,44 +437,54 @@ async function initApp() {
     }
 
     // View toggle buttons with null checks
-    console.log('View buttons:', viewWeekBtn, viewMonthBtn, viewQuarterBtn, viewYearBtn);
+    console.log('View buttons:', viewDailyBtn, viewWeeklyBtn, viewMonthlyBtn, viewQuarterlyBtn, viewYearlyBtn);
 
-    if (viewWeekBtn) {
-        viewWeekBtn.addEventListener('click', () => {
-            console.log('Week button clicked');
-            currentView = 'week';
+    if (viewDailyBtn) {
+        viewDailyBtn.addEventListener('click', () => {
+            console.log('Daily button clicked');
+            currentView = 'daily';
             document.querySelectorAll('.btn-view-toggle').forEach(btn => btn.classList.remove('active'));
-            viewWeekBtn.classList.add('active');
+            viewDailyBtn.classList.add('active');
             renderTimeline();
         });
     }
 
-    if (viewMonthBtn) {
-        viewMonthBtn.addEventListener('click', () => {
-            console.log('Month button clicked');
-            currentView = 'month';
+    if (viewWeeklyBtn) {
+        viewWeeklyBtn.addEventListener('click', () => {
+            console.log('Weekly button clicked');
+            currentView = 'weekly';
             document.querySelectorAll('.btn-view-toggle').forEach(btn => btn.classList.remove('active'));
-            viewMonthBtn.classList.add('active');
+            viewWeeklyBtn.classList.add('active');
             renderTimeline();
         });
     }
 
-    if (viewQuarterBtn) {
-        viewQuarterBtn.addEventListener('click', () => {
-            console.log('Quarter button clicked');
-            currentView = 'quarter';
+    if (viewMonthlyBtn) {
+        viewMonthlyBtn.addEventListener('click', () => {
+            console.log('Monthly button clicked');
+            currentView = 'monthly';
             document.querySelectorAll('.btn-view-toggle').forEach(btn => btn.classList.remove('active'));
-            viewQuarterBtn.classList.add('active');
+            viewMonthlyBtn.classList.add('active');
             renderTimeline();
         });
     }
 
-    if (viewYearBtn) {
-        viewYearBtn.addEventListener('click', () => {
-            console.log('Year button clicked');
-            currentView = 'year';
+    if (viewQuarterlyBtn) {
+        viewQuarterlyBtn.addEventListener('click', () => {
+            console.log('Quarterly button clicked');
+            currentView = 'quarterly';
             document.querySelectorAll('.btn-view-toggle').forEach(btn => btn.classList.remove('active'));
-            viewYearBtn.classList.add('active');
+            viewQuarterlyBtn.classList.add('active');
+            renderTimeline();
+        });
+    }
+
+    if (viewYearlyBtn) {
+        viewYearlyBtn.addEventListener('click', () => {
+            console.log('Yearly button clicked');
+            currentView = 'yearly';
+            document.querySelectorAll('.btn-view-toggle').forEach(btn => btn.classList.remove('active'));
+            viewYearlyBtn.classList.add('active');
             renderTimeline();
         });
     }
@@ -847,6 +858,122 @@ async function initApp() {
     renderTable();
     renderTimeline();
 
+    // Render hierarchical timeline headers
+    function renderTimelineHeaders(minDate, maxDate, totalDays, pixelsPerDay, timelineWidth, displayMode) {
+        let html = '';
+
+        // Calculate hierarchical structures
+        const yearSpans = [];
+        const quarterSpans = [];
+        const monthSpans = [];
+        const weekSpans = [];
+        const daySpans = [];
+
+        let currentDate = new Date(minDate);
+        let dayIndex = 0;
+
+        // Build spans for each level
+        while (currentDate <= maxDate) {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            const quarter = Math.floor(month / 3) + 1;
+            const weekNum = getWeekNumber(currentDate);
+
+            // Year spans
+            if (yearSpans.length === 0 || yearSpans[yearSpans.length - 1].year !== year) {
+                yearSpans.push({ year, startDay: dayIndex, endDay: dayIndex });
+            } else {
+                yearSpans[yearSpans.length - 1].endDay = dayIndex;
+            }
+
+            // Quarter spans
+            if (quarterSpans.length === 0 || quarterSpans[quarterSpans.length - 1].quarter !== quarter || quarterSpans[quarterSpans.length - 1].year !== year) {
+                quarterSpans.push({ year, quarter, startDay: dayIndex, endDay: dayIndex });
+            } else {
+                quarterSpans[quarterSpans.length - 1].endDay = dayIndex;
+            }
+
+            // Month spans
+            if (monthSpans.length === 0 || monthSpans[monthSpans.length - 1].month !== month || monthSpans[monthSpans.length - 1].year !== year) {
+                const monthName = currentDate.toLocaleDateString('en-US', { month: 'short' });
+                monthSpans.push({ year, month, monthName, startDay: dayIndex, endDay: dayIndex });
+            } else {
+                monthSpans[monthSpans.length - 1].endDay = dayIndex;
+            }
+
+            // Week spans
+            if (weekSpans.length === 0 || weekSpans[weekSpans.length - 1].weekNum !== weekNum) {
+                weekSpans.push({ weekNum, startDay: dayIndex, endDay: dayIndex });
+            } else {
+                weekSpans[weekSpans.length - 1].endDay = dayIndex;
+            }
+
+            // Day spans
+            daySpans.push({ date: currentDate.getDate(), startDay: dayIndex, endDay: dayIndex });
+
+            currentDate.setDate(currentDate.getDate() + 1);
+            dayIndex++;
+        }
+
+        // Render based on view mode
+        html += '<div class="timeline-header-hierarchical" style="display: flex;">';
+        html += '<div class="timeline-left-spacer"></div>';
+        html += '<div class="timeline-headers-container" style="width: ' + timelineWidth + 'px; overflow: hidden;">';
+
+        if (displayMode === 'weeks') {
+            // Zoomed out mode - show only week numbers
+            html += '<div class="timeline-header-row" style="display: flex; border-bottom: 1px solid #e2e8f0;">';
+            weekSpans.forEach(span => {
+                const width = (span.endDay - span.startDay + 1) * pixelsPerDay;
+                html += `<div class="timeline-header-cell" style="width: ${width}px; min-width: ${width}px; padding: 8px 4px; text-align: center; font-size: 11px; font-weight: 600; background: #f7fafc;">CW${span.weekNum}</div>`;
+            });
+            html += '</div>';
+        } else {
+            // Normal hierarchical views
+            if (currentView === 'daily') {
+                // 5 rows: Year, Quarter, Month, Week, Date
+                html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white');
+                html += renderHeaderRow(quarterSpans, pixelsPerDay, span => `Q${span.quarter}`, '#764ba2', 'white');
+                html += renderHeaderRow(monthSpans, pixelsPerDay, span => span.monthName, '#48bb78', 'white');
+                html += renderHeaderRow(weekSpans, pixelsPerDay, span => `W${span.weekNum}`, '#4299e1', 'white');
+                html += renderHeaderRow(daySpans, pixelsPerDay, span => span.date, '#f7fafc', '#2d3748');
+            } else if (currentView === 'weekly') {
+                // 4 rows: Year, Quarter, Month, Week
+                html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white');
+                html += renderHeaderRow(quarterSpans, pixelsPerDay, span => `Q${span.quarter}`, '#764ba2', 'white');
+                html += renderHeaderRow(monthSpans, pixelsPerDay, span => span.monthName, '#48bb78', 'white');
+                html += renderHeaderRow(weekSpans, pixelsPerDay, span => `W${span.weekNum}`, '#4299e1', 'white');
+            } else if (currentView === 'monthly') {
+                // 3 rows: Year, Quarter, Month
+                html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white');
+                html += renderHeaderRow(quarterSpans, pixelsPerDay, span => `Q${span.quarter}`, '#764ba2', 'white');
+                html += renderHeaderRow(monthSpans, pixelsPerDay, span => span.monthName, '#48bb78', 'white');
+            } else if (currentView === 'quarterly') {
+                // 2 rows: Year, Quarter
+                html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white');
+                html += renderHeaderRow(quarterSpans, pixelsPerDay, span => `Q${span.quarter}`, '#764ba2', 'white');
+            } else if (currentView === 'yearly') {
+                // 2 rows: Year, Month
+                html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white');
+                html += renderHeaderRow(monthSpans, pixelsPerDay, span => span.monthName, '#48bb78', 'white');
+            }
+        }
+
+        html += '</div></div>';
+        return html;
+    }
+
+    function renderHeaderRow(spans, pixelsPerDay, labelFunc, bgColor, textColor) {
+        let html = '<div class="timeline-header-row" style="display: flex; border-bottom: 1px solid #e2e8f0;">';
+        spans.forEach(span => {
+            const width = (span.endDay - span.startDay + 1) * pixelsPerDay;
+            const label = labelFunc(span);
+            html += `<div class="timeline-header-cell" style="width: ${width}px; min-width: ${width}px; padding: 8px 4px; text-align: center; font-size: 11px; font-weight: 600; background: ${bgColor}; color: ${textColor}; border-right: 1px solid rgba(255,255,255,0.2);">${label}</div>`;
+        });
+        html += '</div>';
+        return html;
+    }
+
     // Enhanced renderTimeline function with drag-and-drop, view modes, today marker, and smart positioning
     function renderTimeline() {
         console.log('renderTimeline called with view:', currentView);
@@ -896,26 +1023,32 @@ async function initApp() {
 
         // Add padding based on view - minimal padding (2 days extra)
         // All views now start from the actual data, not from beginning of period
-        if (currentView === 'week') {
-            // Week view - find Monday of the week containing minDate
+        if (currentView === 'daily') {
+            // Daily view - find Monday of the week containing minDate
             const minDay = minDate.getDay();
             const daysToMonday = minDay === 0 ? 6 : minDay - 1; // Sunday is 0, we want Monday
             minDate.setDate(minDate.getDate() - daysToMonday);
 
             // Add just 2 days padding after maxDate
             maxDate.setDate(maxDate.getDate() + 2);
-        } else if (currentView === 'year') {
-            // Year view - start from the first day of the month containing minDate
+        } else if (currentView === 'weekly') {
+            // Weekly view - start from Monday of week
+            const minDay = minDate.getDay();
+            const daysToMonday = minDay === 0 ? 6 : minDay - 1;
+            minDate.setDate(minDate.getDate() - daysToMonday);
+            maxDate.setDate(maxDate.getDate() + 2);
+        } else if (currentView === 'yearly') {
+            // Yearly view - start from the first day of the month containing minDate
             minDate.setDate(1);
             // Add 2 days padding
             maxDate.setDate(maxDate.getDate() + 2);
-        } else if (currentView === 'quarter') {
-            // Quarter view - start from the first day of the month containing minDate
+        } else if (currentView === 'quarterly') {
+            // Quarterly view - start from the first day of the month containing minDate
             minDate.setDate(1);
             // Add 2 days padding
             maxDate.setDate(maxDate.getDate() + 2);
-        } else { // month view
-            // Month view - start from the first day of the month containing minDate
+        } else { // monthly view
+            // Monthly view - start from the first day of the month containing minDate
             minDate.setDate(1);
             // Add 2 days padding
             maxDate.setDate(maxDate.getDate() + 2);
@@ -1100,10 +1233,11 @@ async function initApp() {
         let displayMode = 'days'; // 'days', 'weeks', 'months'
 
         // Base pixels per day for each view
-        let basePixelsPerDay = currentView === 'week' ? Math.max(30, 2400 / totalDays) :
-                               currentView === 'year' ? Math.max(1, 1200 / totalDays) :
-                               currentView === 'quarter' ? Math.max(2, 1200 / totalDays) :
-                               Math.max(3, 1200 / totalDays);
+        let basePixelsPerDay = currentView === 'daily' ? Math.max(30, 2400 / totalDays) :
+                               currentView === 'weekly' ? Math.max(15, 1800 / totalDays) :
+                               currentView === 'monthly' ? Math.max(3, 1200 / totalDays) :
+                               currentView === 'quarterly' ? Math.max(2, 1200 / totalDays) :
+                               Math.max(1, 1200 / totalDays); // yearly
 
         // Apply zoom level
         // Zoom level ranges from -5 (most zoomed out) to +3 (most zoomed in)
@@ -1138,78 +1272,8 @@ async function initApp() {
         // Start bordered container that includes months and workstreams
         html += `<div class="timeline-bordered-container" style="border: 3px solid #3b82f6; border-radius: 8px; display: inline-block; overflow: hidden;">`;
 
-        // Period headers
-        html += '<div class="timeline-header-row" style="display: flex;">';
-        html += '<div class="timeline-left-spacer"></div>';
-        html += '<div class="timeline-months-wrapper" style="width: ' + timelineWidth + 'px; overflow: hidden;"><div class="timeline-months">';
-
-        if (displayMode === 'weeks') {
-            // Show week numbers when zoomed out
-            let currentWeekStart = new Date(minDate);
-            while (currentWeekStart <= maxDate) {
-                const weekEnd = new Date(currentWeekStart);
-                weekEnd.setDate(weekEnd.getDate() + 6);
-                const weekNum = getWeekNumber(currentWeekStart);
-                const weekWidth = 7 * pixelsPerDay; // 7 days worth
-
-                html += `<div class="timeline-month" style="width: ${weekWidth}px; min-width: ${weekWidth}px;">`;
-                html += `<div class="timeline-month-header" style="font-size: 11px;">CW${weekNum}</div>`;
-                html += `</div>`;
-
-                currentWeekStart.setDate(currentWeekStart.getDate() + 7);
-            }
-        } else {
-            // Normal mode - show periods as before
-            periods.forEach(period => {
-                const width = period.days * pixelsPerDay;
-                html += `<div class="timeline-month" style="width: ${width}px; min-width: ${width}px;">`;
-                html += `<div class="timeline-month-header">${period.label}</div>`;
-
-                // Show weeks in month view
-                if (currentView === 'month' && period.weeks) {
-                    html += `<div class="timeline-weeks">`;
-                    period.weeks.forEach(week => {
-                        html += `<div class="timeline-week">W${week.number}</div>`;
-                    });
-                    html += `</div>`;
-                }
-
-                // Show weeks in quarter view
-                if (currentView === 'quarter' && period.weeks) {
-                    html += `<div class="timeline-weeks" style="display: flex;">`;
-                    period.weeks.forEach(week => {
-                        html += `<div class="timeline-week" style="flex: 1; font-size: 9px;">W${week.number}</div>`;
-                    });
-                    html += `</div>`;
-                }
-
-                // Show months in year view
-                if (currentView === 'year' && period.months) {
-                    html += `<div class="timeline-weeks" style="display: flex;">`;
-                    period.months.forEach(month => {
-                        html += `<div class="timeline-week" style="flex: 1; font-size: 9px;">${month.name}</div>`;
-                    });
-                    html += `</div>`;
-                }
-
-                // Show days in week view with actual dates
-                if (currentView === 'week' && period.days === 7) {
-                    html += `<div class="timeline-weeks" style="display: flex;">`;
-                    const weekStart = new Date(period.start);
-                    for (let i = 0; i < 7; i++) {
-                        const dayDate = new Date(weekStart);
-                        dayDate.setDate(dayDate.getDate() + i);
-                        const dateStr = dayDate.getDate(); // Just the day number
-                        html += `<div class="timeline-week" style="flex: 1; font-size: 10px;">${dateStr}</div>`;
-                    }
-                    html += `</div>`;
-                }
-
-                html += `</div>`;
-            });
-        }
-
-        // Don't add extra padding - keep month headers aligned with timeline
+        // Render hierarchical timeline headers based on view
+        html += renderTimelineHeaders(minDate, maxDate, totalDays, pixelsPerDay, timelineWidth, displayMode);
         html += '</div></div></div>';
 
         // General milestones section and workstreams
@@ -1256,8 +1320,8 @@ async function initApp() {
                 gridLinesHtml += `<div class="week-line" style="left: ${weekLeft}px;"></div>`;
                 currentWeekStart.setDate(currentWeekStart.getDate() + 7);
             }
-        } else if (currentView === 'week') {
-            // Week view - show daily gridlines
+        } else if (currentView === 'daily') {
+            // Daily view - show daily gridlines
             for (let day = 0; day <= totalDays; day++) {
                 const currentDate = new Date(minDate);
                 currentDate.setDate(currentDate.getDate() + day);
@@ -1265,23 +1329,37 @@ async function initApp() {
 
                 gridLinesHtml += `<div class="week-line" style="left: ${dayLeft}px; opacity: 0.3;"></div>`;
             }
-        } else if (currentView === 'month') {
-            periods.forEach(period => {
-                if (period.weeks) {
-                    period.weeks.forEach(week => {
-                        const weekStartDay = Math.ceil((week.start - minDate) / (1000 * 60 * 60 * 24));
-                        const weekLeft = weekStartDay * pixelsPerDay;
-                        gridLinesHtml += `<div class="week-line" style="left: ${weekLeft}px;"></div>`;
-                    });
+        } else if (currentView === 'weekly') {
+            // Weekly view - show weekly gridlines
+            let currentWeekStart = new Date(minDate);
+            while (currentWeekStart <= maxDate) {
+                const weekStartDay = Math.ceil((currentWeekStart - minDate) / (1000 * 60 * 60 * 24));
+                const weekLeft = weekStartDay * pixelsPerDay;
+                gridLinesHtml += `<div class="week-line" style="left: ${weekLeft}px;"></div>`;
+                currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+            }
+        } else if (currentView === 'monthly') {
+            // Monthly view - show monthly gridlines
+            let currentMonthStart = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+            while (currentMonthStart <= maxDate) {
+                const monthStartDay = Math.ceil((currentMonthStart - minDate) / (1000 * 60 * 60 * 24));
+                const monthLeft = monthStartDay * pixelsPerDay;
+                if (monthStartDay >= 0) {
+                    gridLinesHtml += `<div class="week-line" style="left: ${monthLeft}px;"></div>`;
                 }
-            });
+                currentMonthStart.setMonth(currentMonthStart.getMonth() + 1);
+            }
         } else {
-            // For quarter and year view, show period start lines
-            periods.forEach(period => {
-                const periodStartDay = Math.ceil((period.start - minDate) / (1000 * 60 * 60 * 24));
-                const periodLeft = periodStartDay * pixelsPerDay;
-                gridLinesHtml += `<div class="week-line" style="left: ${periodLeft}px;"></div>`;
-            });
+            // For quarterly and yearly view, show quarter start lines
+            let currentQuarterStart = new Date(minDate.getFullYear(), Math.floor(minDate.getMonth() / 3) * 3, 1);
+            while (currentQuarterStart <= maxDate) {
+                const quarterStartDay = Math.ceil((currentQuarterStart - minDate) / (1000 * 60 * 60 * 24));
+                const quarterLeft = quarterStartDay * pixelsPerDay;
+                if (quarterStartDay >= 0) {
+                    gridLinesHtml += `<div class="week-line" style="left: ${quarterLeft}px;"></div>`;
+                }
+                currentQuarterStart.setMonth(currentQuarterStart.getMonth() + 3);
+            }
         }
 
         // Add TODAY marker
