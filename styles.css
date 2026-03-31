@@ -986,10 +986,11 @@ textarea {
     flex: 1;
     position: relative;
     min-height: 100px;
-    padding-top: 35px; /* Space for TODAY label at top */
+    padding-top: 40px; /* Space for TODAY label at top - reduced to better align */
     overflow: hidden; /* Prevent overflow beyond border */
-    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 50%, #dbeafe 100%); /* Light blue gradient background */
+    background: white; /* White background */
     width: 100%; /* Ensure it fills the container */
+    border-bottom: 3px solid #1e3a8a; /* Dark blue separator between workstreams */
 }
 
 .timeline-milestone {
@@ -1117,27 +1118,31 @@ textarea {
 /* Start date - positioned below the line start */
 .timeline-bar-start-date {
     position: absolute !important;
-    left: 0 !important;
-    top: 38px !important; /* Moved down from 28px to 38px (20px bar ends at 35px + 3px gap) */
+    left: 5px !important;
+    top: 50% !important; /* Center vertically inside the bar */
+    transform: translateY(-50%) !important;
     font-size: 10px !important;
-    font-weight: 500 !important;
-    color: #4b5563 !important;
+    font-weight: 600 !important;
+    color: white !important; /* White font color */
     white-space: nowrap !important;
     display: block !important;
     pointer-events: none !important;
+    z-index: 5 !important;
 }
 
-/* End date - positioned below the line end (same style as start) */
+/* End date - positioned inside the line end */
 .timeline-bar-end-date {
     position: absolute !important;
-    right: 0 !important;
-    top: 38px !important; /* Moved down from 28px to 38px */
+    right: 5px !important;
+    top: 50% !important; /* Center vertically inside the bar */
+    transform: translateY(-50%) !important;
     font-size: 10px !important;
-    font-weight: 500 !important;
-    color: #4b5563 !important;
+    font-weight: 600 !important;
+    color: white !important; /* White font color */
     white-space: nowrap !important;
     display: block !important;
     pointer-events: none !important;
+    z-index: 5 !important;
 }
 
 /* Stacked dates for short activities */
@@ -1165,14 +1170,15 @@ textarea {
 .timeline-bar-single-date {
     position: absolute !important;
     left: 50% !important;
-    transform: translateX(-50%) !important;
-    top: 38px !important; /* Adjusted for thicker activity bar */
+    transform: translate(-50%, -50%) !important;
+    top: 50% !important; /* Center vertically inside the bar */
     font-size: 10px !important;
-    font-weight: 500 !important;
-    color: #4b5563 !important;
+    font-weight: 600 !important;
+    color: white !important; /* White font color */
     white-space: nowrap !important;
     display: block !important;
     pointer-events: none !important;
+    z-index: 5 !important;
 }
 
 /* Week separator lines */
@@ -1233,18 +1239,18 @@ textarea {
 
 .today-marker-label {
     position: absolute;
-    top: 5px; /* Position near the top of timeline-grid */
+    top: -35px; /* Position above the workstreams, right below timeline headers */
     left: 50%;
     transform: translateX(-50%);
     background: #ef4444;
     color: white;
-    font-size: 10px; /* Slightly larger for visibility */
+    font-size: 10px;
     font-weight: 700;
     padding: 4px 10px;
     border-radius: 4px;
     white-space: nowrap;
     box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
-    z-index: 100; /* Very high z-index to ensure visibility */
+    z-index: 100;
     pointer-events: none;
 }
 

@@ -942,7 +942,7 @@ async function initApp() {
                 html += renderHeaderRow(quarterSpans, pixelsPerDay, span => `Q${span.quarter}`, '#764ba2', 'white');
                 html += renderHeaderRow(monthSpans, pixelsPerDay, span => span.monthName, '#48bb78', 'white');
                 html += renderHeaderRow(weekSpans, pixelsPerDay, span => `W${span.weekNum}`, '#4299e1', 'white');
-                html += renderHeaderRow(daySpans, pixelsPerDay, span => span.date, '#f7fafc', '#2d3748');
+                html += renderHeaderRow(daySpans, pixelsPerDay, span => span.date, '#e5e7eb', '#2d3748');
             } else if (currentView === 'weekly') {
                 // 4 rows: Year, Quarter, Month, Week
                 html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white');
@@ -1553,7 +1553,7 @@ async function initApp() {
                 }
 
                 const milestoneHeight = milestones.length > 0 ? 65 : 0;
-                const top = milestoneHeight + (item.assignedRow * 50) + 10; // Increased spacing from 40 to 50
+                const top = milestoneHeight + (item.assignedRow * 70) + 30; // Increased spacing from 50 to 70, and offset from 10 to 30 to start below Today label
                 const status = item.status || 'not-started';
                 const startDateStr = formatDateShort(item.startDate);
                 const endDateStr = formatDateShort(item.endDate);
@@ -1613,7 +1613,7 @@ async function initApp() {
             });
 
             const maxRow = Math.max(...activities.map(a => a.assignedRow || 0), -1) + 1;
-            const totalActivityHeight = maxRow * 50; // Updated to match new spacing
+            const totalActivityHeight = maxRow * 70; // Updated to match new spacing
             const milestoneHeight = milestones.length > 0 ? 65 : 0;
             const barHeight = 24; // Height of activity bar
             const labelAboveHeight = 20; // Height of label when positioned above bar
