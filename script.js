@@ -1018,11 +1018,52 @@ async function initApp() {
         // Right edge position relative to viewport
         const rightEdgeInViewport = borderedRect.right - canvasRect.left;
 
-        // Zoom out should be disabled when the right border is at or to the left of the right edge of viewport
-        // Allow a small tolerance (10px) for rounding
+        // Check if any text in activities or milestones is being clipped
+        let hasClippedText = false;
+
+        // Check activity bars
+        const activityBars = timelineCanvas.querySelectorAll('.timeline-bar');
+        activityBars.forEach(bar => {
+            const barName = bar.querySelector('.timeline-bar-name');
+            const startDateEl = bar.querySelector('.timeline-bar-start-date');
+            const endDateEl = bar.querySelector('.timeline-bar-end-date');
+
+            // Check if name is clipped (scrollWidth > clientWidth means content is being cut off)
+            if (barName && barName.scrollWidth > barName.clientWidth + 1) {
+                hasClippedText = true;
+            }
+
+            // Check if dates are clipped
+            if (startDateEl && startDateEl.scrollWidth > startDateEl.clientWidth + 1) {
+                hasClippedText = true;
+            }
+            if (endDateEl && endDateEl.scrollWidth > endDateEl.clientWidth + 1) {
+                hasClippedText = true;
+            }
+        });
+
+        // Check milestone labels
+        const milestoneLabels = timelineCanvas.querySelectorAll('.milestone-label');
+        milestoneLabels.forEach(label => {
+            if (label.scrollWidth > label.clientWidth + 1) {
+                hasClippedText = true;
+            }
+        });
+
+        // Check milestone dates
+        const milestoneDates = timelineCanvas.querySelectorAll('.milestone-date');
+        milestoneDates.forEach(dateEl => {
+            if (dateEl.scrollWidth > dateEl.clientWidth + 1) {
+                hasClippedText = true;
+            }
+        });
+
+        // Zoom out should be disabled when:
+        // 1. The right border is at or to the left of the right edge of viewport, OR
+        // 2. Any text content is being clipped
         const rightBorderVisible = rightEdgeInViewport <= viewportWidth + 10;
 
-        if (rightBorderVisible) {
+        if (rightBorderVisible || hasClippedText) {
             zoomOutBtn.disabled = true;
             zoomOutBtn.style.opacity = '0.4';
             zoomOutBtn.style.cursor = 'not-allowed';
