@@ -1690,13 +1690,22 @@ async function initApp() {
                         nextWorkday.setDate(nextWorkday.getDate() + 1);
                     }
 
-                    // Check if current starts AFTER next workday (has gap)
-                    if (currentStart > nextWorkday) {
-                        // Has gap - can place in same logical row as previous
+                    // IMPORTANT: Milestones must ALWAYS be in separate rows
+                    // Check if current item is a milestone OR previous item is a milestone
+                    const currentIsMilestone = item.type === 'milestone';
+                    const prevIsMilestone = prevItem.type === 'milestone';
+
+                    if (currentIsMilestone || prevIsMilestone) {
+                        // If either current or previous is a milestone, always use a new row
+                        currentPhysicalRow = prevItem.physicalRow + ACTIVITY_ROW_HEIGHT + SPACING_ROW_HEIGHT;
+                        item.assignedRow = prevItem.assignedRow + 1;
+                        item.physicalRow = currentPhysicalRow;
+                    } else if (currentStart > nextWorkday) {
+                        // Both are activities with a gap - can place in same logical row as previous
                         item.assignedRow = prevItem.assignedRow;
                         item.physicalRow = prevItem.physicalRow;
                     } else {
-                        // Adjacent or overlapping - needs new row
+                        // Both are activities, adjacent or overlapping - needs new row
                         // Skip one spacing row, then place in next activity row
                         currentPhysicalRow = prevItem.physicalRow + ACTIVITY_ROW_HEIGHT + SPACING_ROW_HEIGHT;
                         item.assignedRow = prevItem.assignedRow + 1;
