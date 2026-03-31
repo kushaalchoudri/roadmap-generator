@@ -953,9 +953,8 @@ async function initApp() {
                 html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white');
                 html += renderHeaderRow(quarterSpans, pixelsPerDay, span => `Q${span.quarter}`, '#764ba2', 'white');
             } else if (currentView === 'yearly') {
-                // 2 rows: Year, Quarter (each quarter is a column)
+                // 1 row: Year only
                 html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white');
-                html += renderHeaderRow(quarterSpans, pixelsPerDay, span => `Q${span.quarter}`, '#764ba2', 'white');
             }
         }
 
@@ -1237,7 +1236,7 @@ async function initApp() {
 
         // Base pixels per day for each view
         // Quarter view: 1 week per column = 7 days should take reasonable space
-        // Year view: 1 quarter per column = ~90 days should take reasonable space
+        // Year view: highly compressed - showing years only
         let basePixelsPerDay;
         if (currentView === 'daily') {
             basePixelsPerDay = Math.max(30, 2400 / totalDays);
@@ -1250,9 +1249,9 @@ async function initApp() {
             // So approximately 7-10 pixels per day
             basePixelsPerDay = Math.max(7, 2100 / totalDays);
         } else { // yearly
-            // Each quarter should be a visible column: ~90 days = ~50-70 pixels
-            // So approximately 0.5-0.8 pixels per day
-            basePixelsPerDay = Math.max(0.6, 1800 / totalDays);
+            // Highly compressed view - entire year should fit in reasonable width
+            // Approximately 0.3 pixels per day (365 days = ~110 pixels per year)
+            basePixelsPerDay = Math.max(0.3, 1200 / totalDays);
         }
 
         // Apply zoom level
@@ -1383,15 +1382,20 @@ async function initApp() {
                 currentWeekStart.setDate(currentWeekStart.getDate() + 7);
             }
         } else { // yearly
-            // Yearly view - show quarterly gridlines (each column = 1 quarter)
-            let currentQuarterStart = new Date(minDate.getFullYear(), Math.floor(minDate.getMonth() / 3) * 3, 1);
-            while (currentQuarterStart <= maxDate) {
-                const quarterStartDay = Math.ceil((currentQuarterStart - minDate) / (1000 * 60 * 60 * 24));
-                const quarterLeft = quarterStartDay * pixelsPerDay;
-                if (quarterStartDay >= 0) {
-                    gridLinesHtml += `<div class="week-line" style="left: ${quarterLeft}px;"></div>`;
+            // Yearly view - show year boundaries
+            let currentYearStart = new Date(minDate.getFullYear(), 0, 1); // Jan 1
+            // If minDate is not Jan 1, move to next year
+            if (currentYearStart < minDate) {
+                currentYearStart = new Date(minDate.getFullYear() + 1, 0, 1);
+            }
+
+            while (currentYearStart <= maxDate) {
+                const yearStartDay = Math.ceil((currentYearStart - minDate) / (1000 * 60 * 60 * 24));
+                const yearLeft = yearStartDay * pixelsPerDay;
+                if (yearStartDay >= 0) {
+                    gridLinesHtml += `<div class="week-line" style="left: ${yearLeft}px;"></div>`;
                 }
-                currentQuarterStart.setMonth(currentQuarterStart.getMonth() + 3);
+                currentYearStart = new Date(currentYearStart.getFullYear() + 1, 0, 1);
             }
         }
 
