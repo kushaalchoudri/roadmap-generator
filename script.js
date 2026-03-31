@@ -868,10 +868,10 @@ async function initApp() {
         roadmapItems.forEach(item => {
             if (item.type === 'milestone') {
                 const date = item.date || item.startDate;
-                if (date) allDates.push(new Date(date));
+                if (date) allDates.push(parseLocalDate(date));
             } else {
-                if (item.startDate) allDates.push(new Date(item.startDate));
-                if (item.endDate) allDates.push(new Date(item.endDate));
+                if (item.startDate) allDates.push(parseLocalDate(item.startDate));
+                if (item.endDate) allDates.push(parseLocalDate(item.endDate));
             }
         });
 
@@ -1315,7 +1315,7 @@ async function initApp() {
             // Gridlines are now in global container, not here
 
             generalMilestones.forEach(item => {
-                const itemDate = new Date(item.date);
+                const itemDate = parseLocalDate(item.date);
                 const daysFromStart = Math.ceil((itemDate - minDate) / (1000 * 60 * 60 * 24));
                 const left = daysFromStart * pixelsPerDay;
 
@@ -1360,7 +1360,7 @@ async function initApp() {
 
             // Render milestones
             milestones.forEach(item => {
-                const itemDate = new Date(item.date);
+                const itemDate = parseLocalDate(item.date);
                 const daysFromStart = Math.ceil((itemDate - minDate) / (1000 * 60 * 60 * 24));
                 const left = daysFromStart * pixelsPerDay;
 
@@ -1377,8 +1377,8 @@ async function initApp() {
             activities.forEach(activity => delete activity.assignedRow);
 
             activities.forEach((item, activityIndex) => {
-                const start = new Date(item.startDate);
-                const end = new Date(item.endDate);
+                const start = parseLocalDate(item.startDate);
+                const end = parseLocalDate(item.endDate);
                 const daysFromStart = Math.ceil((start - minDate) / (1000 * 60 * 60 * 24));
                 const duration = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
                 const left = daysFromStart * pixelsPerDay;
@@ -1585,13 +1585,13 @@ async function initApp() {
                     const newStartDate = new Date(minDate);
                     newStartDate.setDate(newStartDate.getDate() + newStartDays);
 
-                    const duration = Math.ceil((new Date(item.endDate) - new Date(item.startDate)) / (1000 * 60 * 60 * 24));
+                    const duration = Math.ceil((parseLocalDate(item.endDate) - parseLocalDate(item.startDate)) / (1000 * 60 * 60 * 24));
                     const newEndDate = new Date(newStartDate);
                     newEndDate.setDate(newEndDate.getDate() + duration);
 
                     bar.style.left = newLeft + 'px';
-                    bar.querySelector('.timeline-bar-start-date').textContent = formatDateShort(newStartDate.toISOString().split('T')[0]);
-                    bar.querySelector('.timeline-bar-end-date').textContent = formatDateShort(newEndDate.toISOString().split('T')[0]);
+                    bar.querySelector('.timeline-bar-start-date').textContent = formatDateShort(formatLocalDateToISO(newStartDate));
+                    bar.querySelector('.timeline-bar-end-date').textContent = formatDateShort(formatLocalDateToISO(newEndDate));
                 };
 
                 const onMouseUp = async (e) => {
@@ -1601,12 +1601,12 @@ async function initApp() {
                     const newStartDate = new Date(minDate);
                     newStartDate.setDate(newStartDate.getDate() + newStartDays);
 
-                    const duration = Math.ceil((new Date(item.endDate) - new Date(item.startDate)) / (1000 * 60 * 60 * 24));
+                    const duration = Math.ceil((parseLocalDate(item.endDate) - parseLocalDate(item.startDate)) / (1000 * 60 * 60 * 24));
                     const newEndDate = new Date(newStartDate);
                     newEndDate.setDate(newEndDate.getDate() + duration);
 
-                    item.startDate = newStartDate.toISOString().split('T')[0];
-                    item.endDate = newEndDate.toISOString().split('T')[0];
+                    item.startDate = formatLocalDateToISO(newStartDate);
+                    item.endDate = formatLocalDateToISO(newEndDate);
 
                     await saveData();
                     renderTable();
@@ -1648,7 +1648,7 @@ async function initApp() {
                             const newStartDays = Math.round(newLeft / pixelsPerDay);
                             const newStartDate = new Date(minDate);
                             newStartDate.setDate(newStartDate.getDate() + newStartDays);
-                            bar.querySelector('.timeline-bar-start-date').textContent = formatDateShort(newStartDate.toISOString().split('T')[0]);
+                            bar.querySelector('.timeline-bar-start-date').textContent = formatDateShort(formatLocalDateToISO(newStartDate));
                         }
                     };
 
@@ -1661,7 +1661,7 @@ async function initApp() {
                             const newStartDays = Math.round(newLeft / pixelsPerDay);
                             const newStartDate = new Date(minDate);
                             newStartDate.setDate(newStartDate.getDate() + newStartDays);
-                            item.startDate = newStartDate.toISOString().split('T')[0];
+                            item.startDate = formatLocalDateToISO(newStartDate);
 
                             await saveData();
                             renderTable();
@@ -1700,9 +1700,9 @@ async function initApp() {
                             bar.style.width = newWidth + 'px';
 
                             const durationDays = Math.round(newWidth / pixelsPerDay);
-                            const newEndDate = new Date(item.startDate);
+                            const newEndDate = parseLocalDate(item.startDate);
                             newEndDate.setDate(newEndDate.getDate() + durationDays - 1);
-                            bar.querySelector('.timeline-bar-end-date').textContent = formatDateShort(newEndDate.toISOString().split('T')[0]);
+                            bar.querySelector('.timeline-bar-end-date').textContent = formatDateShort(formatLocalDateToISO(newEndDate));
                         }
                     };
 
@@ -1712,9 +1712,9 @@ async function initApp() {
 
                         if (newWidth > 10) {
                             const durationDays = Math.round(newWidth / pixelsPerDay);
-                            const newEndDate = new Date(item.startDate);
+                            const newEndDate = parseLocalDate(item.startDate);
                             newEndDate.setDate(newEndDate.getDate() + durationDays - 1);
-                            item.endDate = newEndDate.toISOString().split('T')[0];
+                            item.endDate = formatLocalDateToISO(newEndDate);
 
                             await saveData();
                             renderTable();
@@ -2186,13 +2186,35 @@ function getWeekdayPosition(startDate, targetDate) {
     return position;
 }
 
+// Parse date string in local timezone (avoid UTC conversion issues)
+function parseLocalDate(dateString) {
+    if (!dateString) return null;
+    // Split the date string to get year, month, day
+    const parts = dateString.split('-');
+    if (parts.length !== 3) return new Date(dateString); // Fallback
+
+    // Create date in local timezone (month is 0-indexed)
+    return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+}
+
+// Format date to YYYY-MM-DD in local timezone
+function formatLocalDateToISO(date) {
+    if (!date) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 function formatDate(dateString) {
-    const date = new Date(dateString);
+    const date = parseLocalDate(dateString);
+    if (!date) return '';
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function formatDateShort(dateString) {
-    const date = new Date(dateString);
+    const date = parseLocalDate(dateString);
+    if (!date) return '';
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
