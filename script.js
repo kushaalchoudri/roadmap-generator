@@ -255,11 +255,9 @@ async function initApp() {
     const saveRoadmapBtn = document.getElementById('saveRoadmapBtn');
     const backToHomeBtn = document.getElementById('backToHomeBtn');
     const downloadBtn = document.getElementById('downloadBtn');
-    const clearBtn = document.getElementById('clearBtn');
     const timelineCanvas = document.getElementById('timeline');
     const exportDbBtn = document.getElementById('exportDbBtn');
     const importDbBtn = document.getElementById('importDbBtn');
-    const resetTimelineBtn = document.getElementById('resetTimelineBtn');
 
     // View toggle buttons
     const viewDailyBtn = document.getElementById('viewDailyBtn');
@@ -305,17 +303,6 @@ async function initApp() {
 
         // Show save button
         saveRoadmapBtn.style.display = 'block';
-    });
-
-    // Clear all button
-    clearBtn.addEventListener('click', async () => {
-        if (confirm('Are you sure you want to clear all items? This cannot be undone.')) {
-            roadmapItems = [];
-            await saveData();
-            renderTable();
-            renderTimeline();
-            saveRoadmapBtn.style.display = 'none';
-        }
     });
 
     // Export database button
@@ -420,22 +407,6 @@ async function initApp() {
     }
 
     // Reset timeline width button
-    if (resetTimelineBtn) {
-        resetTimelineBtn.addEventListener('click', () => {
-            // Reset zoom and extension
-            const timelineCanvas = document.getElementById('timeline');
-            if (timelineCanvas) {
-                timelineCanvas.style.zoom = '1';
-                timelineCanvas.style.width = '';
-            }
-
-            zoomLevel = 0;
-            timelineExtensionDays = 0;
-            sessionStorage.removeItem('timelineExtensionDays');
-            renderTimeline();
-        });
-    }
-
     // View toggle buttons with null checks
     console.log('View buttons:', viewDailyBtn, viewWeeklyBtn, viewMonthlyBtn, viewQuarterlyBtn, viewYearlyBtn);
 
@@ -1545,54 +1516,6 @@ async function initApp() {
             </div>`;
             html += `<div class="workstream-rows" style="position: relative;">`;
             // Gridlines are now in global container, not here
-
-            // Render milestones with overlap detection
-            let milestoneRowMap = {}; // Track which row each milestone is in
-            milestones.forEach((item, index) => {
-                const itemDate = parseLocalDate(item.date);
-                const weekdaysFromStart = getWeekdayPosition(minDate, itemDate);
-                const left = weekdaysFromStart * pixelsPerDay;
-
-                // Check for overlap with previous milestones
-                let row = 0;
-                const MILESTONE_WIDTH = 70; // Width of milestone container (reduced from 80)
-                const MILESTONE_SPACING = MILESTONE_WIDTH + 10; // Add 10px gap
-                const ROW_HEIGHT = 30; // vertical offset per row (reduced from 40)
-
-                // Find available row
-                for (let checkRow = 0; checkRow < 10; checkRow++) {
-                    let hasOverlap = false;
-                    for (let i = 0; i < index; i++) {
-                        const prevItem = milestones[i];
-                        const prevRow = prevItem._row || 0;
-                        if (prevRow === checkRow) {
-                            const prevDate = parseLocalDate(prevItem.date);
-                            const prevWeekdays = getWeekdayPosition(minDate, prevDate);
-                            const prevLeft = prevWeekdays * pixelsPerDay;
-
-                            // Check if within spacing distance (accounting for full width)
-                            if (Math.abs(left - prevLeft) < MILESTONE_SPACING) {
-                                hasOverlap = true;
-                                break;
-                            }
-                        }
-                    }
-                    if (!hasOverlap) {
-                        row = checkRow;
-                        break;
-                    }
-                }
-                item._row = row;
-                const topOffset = row * ROW_HEIGHT;
-
-                html += `
-                    <div class="timeline-milestone" style="left: ${left - MILESTONE_WIDTH/2 + 10}px; top: ${5 + topOffset}px;" title="${escapeHtml(item.name)}\n${formatDate(item.date)}">
-                        <div class="milestone-diamond"></div>
-                        <div class="milestone-label">${escapeHtml(item.name)}</div>
-                        <div class="milestone-date">${formatDateShort(item.date)}</div>
-                    </div>
-                `;
-            });
 
             // NEW ROW-BASED PLACEMENT SYSTEM
             // Step 1: Sort all items (activities + milestones) by start date

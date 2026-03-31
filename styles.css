@@ -271,9 +271,30 @@ textarea {
 /* Adjust timeline controls layout */
 .timeline-controls {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    align-items: flex-start;
+    gap: 16px;
     flex-wrap: wrap;
+}
+
+.control-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.control-label {
+    font-size: 9px;
+    color: #666;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+.control-divider {
+    width: 1px;
+    height: 40px;
+    background: #e0e0e0;
+    margin: 0 4px;
 }
 
 
