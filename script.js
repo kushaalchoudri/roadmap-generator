@@ -1655,8 +1655,6 @@ async function initApp() {
                     <button class="workstream-move-btn" onclick="moveWorkstream('${escapeHtml(workstreamName)}', 'down')" title="Move down" ${index === sortedWorkstreamNames.length - 1 ? 'disabled' : ''}>▼</button>
                 </div>
             </div>`;
-            html += `<div class="workstream-rows" style="position: relative;">`;
-            // Gridlines are now in global container, not here
 
             // NEW ROW-BASED PLACEMENT SYSTEM
             // Step 1: Sort all items (activities + milestones) by start date
@@ -1681,6 +1679,45 @@ async function initApp() {
                     const prevItem = allItems[index - 1];
                     const currentStart = parseLocalDate(item.startDate || item.date);
                     const prevEnd = parseLocalDate(prevItem.endDate || prevItem.date);
+
+                    // Calculate next workday after previous ends
+                    const nextWorkday = new Date(prevEnd);
+                    nextWorkday.setDate(nextWorkday.getDate() + 1);
+                    // Skip weekends
+                    while (nextWorkday.getDay() === 0 || nextWorkday.getDay() === 6) {
+                        nextWorkday.setDate(nextWorkday.getDate() + 1);
+                    }
+
+                    // IMPORTANT: Milestones must ALWAYS be in separate rows
+                    // Check if current item is a milestone OR previous item is a milestone
+                    const currentIsMilestone = item.type === 'milestone';
+                    const prevIsMilestone = prevItem.type === 'milestone';
+
+                    if (currentIsMilestone || prevIsMilestone) {
+                        // If either current or previous is a milestone, always use a new row
+                        currentPhysicalRow = prevItem.physicalRow + ACTIVITY_ROW_HEIGHT + SPACING_ROW_HEIGHT;
+                        item.assignedRow = prevItem.assignedRow + 1;
+                        item.physicalRow = currentPhysicalRow;
+                    } else if (currentStart > nextWorkday) {
+                        // Both are activities with a gap - can place in same logical row as previous
+                        item.assignedRow = prevItem.assignedRow;
+                        item.physicalRow = prevItem.physicalRow;
+                    } else {
+                        // Both are activities, adjacent or overlapping - needs new row
+                        // Skip one spacing row, then place in next activity row
+                        currentPhysicalRow = prevItem.physicalRow + ACTIVITY_ROW_HEIGHT + SPACING_ROW_HEIGHT;
+                        item.assignedRow = prevItem.assignedRow + 1;
+                        item.physicalRow = currentPhysicalRow;
+                    }
+                }
+            });
+
+            // Calculate workstream height based on physical rows BEFORE creating the div
+            const maxPhysicalRow = allItems.length > 0 ? Math.max(...allItems.map(i => i.physicalRow || 0), 0) : 0;
+            const calculatedMinHeight = Math.max(maxPhysicalRow + ACTIVITY_ROW_HEIGHT + 60, 100); // Add bottom padding
+
+            html += `<div class="workstream-rows" style="position: relative; min-height: ${calculatedMinHeight}px;">`;
+            // Gridlines are now in global container, not here
 
                     // Calculate next workday after previous ends
                     const nextWorkday = new Date(prevEnd);
@@ -1788,23 +1825,10 @@ async function initApp() {
                 `;
             });
 
-            // Calculate workstream height based on physical rows
-            const maxPhysicalRow = Math.max(...allItems.map(i => i.physicalRow || 0), 0);
-            const minHeight = Math.max(maxPhysicalRow + ACTIVITY_ROW_HEIGHT + 30, 80); // Add bottom padding
-
             html += `</div>`;
             // Add resize handle (vertical only for workstreams)
             html += `<div class="workstream-resize-handle-vertical" title="Drag to resize height"></div>`;
             html += `</div>`;
-
-            // Replace the workstream-rows div to add calculated min-height
-            const searchStr = `<div class="workstream-rows" style="position: relative;">`;
-            const lastIndex = html.lastIndexOf(searchStr);
-            if (lastIndex !== -1) {
-                html = html.substring(0, lastIndex) +
-                       `<div class="workstream-rows" style="position: relative; min-height: ${minHeight}px;">` +
-                       html.substring(lastIndex + searchStr.length);
-            }
         });
 
         // Calculate total timeline height (sum of all workstreams + general milestones)
