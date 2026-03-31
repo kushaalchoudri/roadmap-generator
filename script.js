@@ -929,7 +929,9 @@ async function initApp() {
 
             const canShowMonths = monthSpans.length > 0 && monthSpans.every(span => {
                 const width = (span.endDay - span.startDay + 1) * pixelsPerDay;
-                return width >= minWidthForMonth;
+                // For monthly view, be more lenient with month display (15px minimum)
+                const threshold = currentView === 'monthly' ? 15 : minWidthForMonth;
+                return width >= threshold;
             });
 
             const canShowQuarters = quarterSpans.length > 0 && quarterSpans.every(span => {
