@@ -153,15 +153,11 @@ async function importDatabase() {
         const file = e.target.files[0];
         if (!file) return;
 
-        if (!confirm('Importing will replace your current database. Continue?')) {
-            return;
-        }
-
         try {
-            await roadmapDB.importFromFile(file);
+            // Import roadmaps as copies (merge into existing database)
+            const result = await roadmapDB.importRoadmapsAsCopies(file);
 
-            const stats = await roadmapDB.getStats();
-            alert(`Database imported successfully!\nRoadmaps: ${stats.roadmaps}\nItems: ${stats.items}`);
+            alert(`Roadmaps imported successfully!\nRoadmaps: ${result.roadmapsImported}\nItems: ${result.itemsImported}\n\nImported roadmaps have been added with "(Imported)" suffix.`);
 
             // Refresh the roadmaps list
             await renderRoadmapsList();

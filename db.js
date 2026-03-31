@@ -181,6 +181,129 @@ class RoadmapDatabase {
     }
 
     /**
+     * Import roadmaps from file as copies (merge into existing database)
+     */
+    async importRoadmapsAsCopies(file) {
+        return new Promise((resolve, reject) => {
+            console.log('Starting import of roadmaps as copies:', file.name);
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const uint8Array = new Uint8Array(e.target.result);
+
+                    // Create a temporary database from the imported file
+                    const tempDb = new this.SQL.Database(uint8Array);
+                    console.log('Temporary database loaded');
+
+                    // Get all roadmaps from the imported database
+                    const roadmapsResult = tempDb.exec('SELECT * FROM roadmaps');
+                    if (roadmapsResult.length === 0) {
+                        tempDb.close();
+                        resolve({ roadmapsImported: 0, itemsImported: 0 });
+                        return;
+                    }
+
+                    const roadmaps = [];
+                    const columns = roadmapsResult[0].columns;
+                    roadmapsResult[0].values.forEach(row => {
+                        const roadmap = {};
+                        columns.forEach((col, idx) => {
+                            roadmap[col] = row[idx];
+                        });
+                        roadmaps.push(roadmap);
+                    });
+
+                    let totalItemsImported = 0;
+
+                    // For each roadmap in the imported file
+                    for (const oldRoadmap of roadmaps) {
+                        const oldId = oldRoadmap.id;
+
+                        // Create a new roadmap with a new ID and "(Imported)" suffix
+                        const newId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+                        const newName = oldRoadmap.name + ' (Imported)';
+                        const now = new Date().toISOString();
+
+                        // Insert the new roadmap into the current database
+                        this.db.run(
+                            'INSERT INTO roadmaps (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)',
+                            [newId, newName, now, now]
+                        );
+
+                        // Get all items for this roadmap from the temp database
+                        const itemsResult = tempDb.exec('SELECT * FROM items WHERE roadmap_id = ?', [oldId]);
+                        if (itemsResult.length > 0) {
+                            const itemColumns = itemsResult[0].columns;
+                            const items = [];
+                            itemsResult[0].values.forEach(row => {
+                                const item = {};
+                                itemColumns.forEach((col, idx) => {
+                                    item[col] = row[idx];
+                                });
+                                items.push(item);
+                            });
+
+                            // Insert all items with new IDs and the new roadmap_id
+                            for (const item of items) {
+                                const newItemId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+
+                                this.db.run(`
+                                    INSERT INTO items (
+                                        id, roadmap_id, type, workstream, name,
+                                        start_date, end_date, date, status, description, created_at
+                                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                `, [
+                                    newItemId,
+                                    newId,  // Use the new roadmap ID
+                                    item.type,
+                                    item.workstream,
+                                    item.name,
+                                    item.start_date,
+                                    item.end_date,
+                                    item.date,
+                                    item.status,
+                                    item.description,
+                                    now
+                                ]);
+                                totalItemsImported++;
+                            }
+                        }
+
+                        // Get workstream order if exists
+                        const orderResult = tempDb.exec('SELECT * FROM workstream_order WHERE roadmap_id = ?', [oldId]);
+                        if (orderResult.length > 0) {
+                            orderResult[0].values.forEach(row => {
+                                this.db.run(
+                                    'INSERT INTO workstream_order (roadmap_id, workstream, order_index) VALUES (?, ?, ?)',
+                                    [newId, row[1], row[2]]
+                                );
+                            });
+                        }
+                    }
+
+                    // Close temporary database
+                    tempDb.close();
+
+                    // Save the updated database
+                    this.saveToLocalStorage();
+                    console.log(`Import complete: ${roadmaps.length} roadmaps, ${totalItemsImported} items`);
+
+                    resolve({ roadmapsImported: roadmaps.length, itemsImported: totalItemsImported });
+                } catch (error) {
+                    console.error('Error during import:', error);
+                    reject(error);
+                }
+            };
+            reader.onerror = (error) => {
+                console.error('FileReader error:', error);
+                reject(error);
+            };
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    /**
      * Create a new roadmap
      */
     async createRoadmap(name) {
