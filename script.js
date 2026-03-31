@@ -862,7 +862,7 @@ async function initApp() {
     function renderTimelineHeaders(minDate, maxDate, totalDays, pixelsPerDay, timelineWidth, displayMode) {
         let html = '';
 
-        // Calculate hierarchical structures
+        // Calculate hierarchical structures (excluding weekends)
         const yearSpans = [];
         const quarterSpans = [];
         const monthSpans = [];
@@ -872,47 +872,53 @@ async function initApp() {
         let currentDate = new Date(minDate);
         let dayIndex = 0;
 
-        // Build spans for each level
+        // Build spans for each level (skip weekends)
         while (currentDate <= maxDate) {
-            const year = currentDate.getFullYear();
-            const month = currentDate.getMonth();
-            const quarter = Math.floor(month / 3) + 1;
-            const weekNum = getWeekNumber(currentDate);
+            const dayOfWeek = currentDate.getDay();
 
-            // Year spans
-            if (yearSpans.length === 0 || yearSpans[yearSpans.length - 1].year !== year) {
-                yearSpans.push({ year, startDay: dayIndex, endDay: dayIndex });
-            } else {
-                yearSpans[yearSpans.length - 1].endDay = dayIndex;
+            // Skip weekends (0 = Sunday, 6 = Saturday)
+            if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                const year = currentDate.getFullYear();
+                const month = currentDate.getMonth();
+                const quarter = Math.floor(month / 3) + 1;
+                const weekNum = getWeekNumber(currentDate);
+
+                // Year spans
+                if (yearSpans.length === 0 || yearSpans[yearSpans.length - 1].year !== year) {
+                    yearSpans.push({ year, startDay: dayIndex, endDay: dayIndex });
+                } else {
+                    yearSpans[yearSpans.length - 1].endDay = dayIndex;
+                }
+
+                // Quarter spans
+                if (quarterSpans.length === 0 || quarterSpans[quarterSpans.length - 1].quarter !== quarter || quarterSpans[quarterSpans.length - 1].year !== year) {
+                    quarterSpans.push({ year, quarter, startDay: dayIndex, endDay: dayIndex });
+                } else {
+                    quarterSpans[quarterSpans.length - 1].endDay = dayIndex;
+                }
+
+                // Month spans
+                if (monthSpans.length === 0 || monthSpans[monthSpans.length - 1].month !== month || monthSpans[monthSpans.length - 1].year !== year) {
+                    const monthName = currentDate.toLocaleDateString('en-US', { month: 'short' });
+                    monthSpans.push({ year, month, monthName, startDay: dayIndex, endDay: dayIndex });
+                } else {
+                    monthSpans[monthSpans.length - 1].endDay = dayIndex;
+                }
+
+                // Week spans
+                if (weekSpans.length === 0 || weekSpans[weekSpans.length - 1].weekNum !== weekNum) {
+                    weekSpans.push({ weekNum, startDay: dayIndex, endDay: dayIndex });
+                } else {
+                    weekSpans[weekSpans.length - 1].endDay = dayIndex;
+                }
+
+                // Day spans
+                daySpans.push({ date: currentDate.getDate(), startDay: dayIndex, endDay: dayIndex });
+
+                dayIndex++;
             }
-
-            // Quarter spans
-            if (quarterSpans.length === 0 || quarterSpans[quarterSpans.length - 1].quarter !== quarter || quarterSpans[quarterSpans.length - 1].year !== year) {
-                quarterSpans.push({ year, quarter, startDay: dayIndex, endDay: dayIndex });
-            } else {
-                quarterSpans[quarterSpans.length - 1].endDay = dayIndex;
-            }
-
-            // Month spans
-            if (monthSpans.length === 0 || monthSpans[monthSpans.length - 1].month !== month || monthSpans[monthSpans.length - 1].year !== year) {
-                const monthName = currentDate.toLocaleDateString('en-US', { month: 'short' });
-                monthSpans.push({ year, month, monthName, startDay: dayIndex, endDay: dayIndex });
-            } else {
-                monthSpans[monthSpans.length - 1].endDay = dayIndex;
-            }
-
-            // Week spans
-            if (weekSpans.length === 0 || weekSpans[weekSpans.length - 1].weekNum !== weekNum) {
-                weekSpans.push({ weekNum, startDay: dayIndex, endDay: dayIndex });
-            } else {
-                weekSpans[weekSpans.length - 1].endDay = dayIndex;
-            }
-
-            // Day spans
-            daySpans.push({ date: currentDate.getDate(), startDay: dayIndex, endDay: dayIndex });
 
             currentDate.setDate(currentDate.getDate() + 1);
-            dayIndex++;
         }
 
         // Render based on view mode
@@ -1228,14 +1234,24 @@ async function initApp() {
             }
         });
 
-        // Calculate dimensions with zoom level
-        const totalDays = Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24)) + 1;
+        // Calculate dimensions with zoom level (counting only weekdays)
+        // Count weekdays between minDate and maxDate
+        let totalWeekdays = 0;
+        let tempDate = new Date(minDate);
+        while (tempDate <= maxDate) {
+            const dayOfWeek = tempDate.getDay();
+            if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                totalWeekdays++;
+            }
+            tempDate.setDate(tempDate.getDate() + 1);
+        }
+        const totalDays = totalWeekdays;
 
         let pixelsPerDay;
         let displayMode = 'days'; // 'days', 'weeks', 'months'
 
-        // Base pixels per day for each view
-        // Quarter view: 1 week per column = 7 days should take reasonable space
+        // Base pixels per day for each view (now based on weekdays only)
+        // Quarter view: 1 week (5 weekdays) per column = should take reasonable space
         // Year view: highly compressed - showing years only
         let basePixelsPerDay;
         if (currentView === 'daily') {
@@ -1296,28 +1312,13 @@ async function initApp() {
         // Add vertical lines and today marker - GLOBAL container spanning entire timeline
         let gridLinesHtml = '';
 
-        // In week display mode (zoomed out), skip weekend shading and use weekly grid lines
-        if (displayMode !== 'weeks') {
-            // Add weekend shading (Saturday and Sunday) - light grey
-            for (let day = 0; day <= totalDays; day++) {
-                const currentDate = new Date(minDate);
-                currentDate.setDate(currentDate.getDate() + day);
-                const dayOfWeek = currentDate.getDay();
-
-                // 0 = Sunday, 6 = Saturday
-                if (dayOfWeek === 0 || dayOfWeek === 6) {
-                    const dayLeft = day * pixelsPerDay;
-                    const dayWidth = pixelsPerDay;
-                    gridLinesHtml += `<div class="weekend-shade" style="left: ${dayLeft}px; width: ${dayWidth}px;"></div>`;
-                }
-            }
-        }
+        // No weekend shading since we're excluding weekends from display
 
         // Add month-end lines for all views (grey line on last day of each month)
         let currentMonthEnd = new Date(minDate.getFullYear(), minDate.getMonth() + 1, 0); // Last day of first month
         while (currentMonthEnd <= maxDate) {
-            const daysSinceMin = Math.ceil((currentMonthEnd - minDate) / (1000 * 60 * 60 * 24));
-            const monthEndLeft = (daysSinceMin + 1) * pixelsPerDay; // +1 to position at end of last day
+            const weekdaysSinceMin = getWeekdayPosition(minDate, currentMonthEnd);
+            const monthEndLeft = weekdaysSinceMin * pixelsPerDay;
             gridLinesHtml += `<div class="month-end-line" style="left: ${monthEndLeft}px;"></div>`;
 
             // Move to next month end
@@ -1329,26 +1330,30 @@ async function initApp() {
             // Week display mode - show weekly gridlines
             let currentWeekStart = new Date(minDate);
             while (currentWeekStart <= maxDate) {
-                const weekStartDay = Math.ceil((currentWeekStart - minDate) / (1000 * 60 * 60 * 24));
-                const weekLeft = weekStartDay * pixelsPerDay;
+                const weekdaysFromStart = getWeekdayPosition(minDate, currentWeekStart);
+                const weekLeft = weekdaysFromStart * pixelsPerDay;
                 gridLinesHtml += `<div class="week-line" style="left: ${weekLeft}px;"></div>`;
                 currentWeekStart.setDate(currentWeekStart.getDate() + 7);
             }
         } else if (currentView === 'daily') {
-            // Daily view - show daily gridlines
-            for (let day = 0; day <= totalDays; day++) {
-                const currentDate = new Date(minDate);
-                currentDate.setDate(currentDate.getDate() + day);
-                const dayLeft = day * pixelsPerDay;
-
-                gridLinesHtml += `<div class="week-line" style="left: ${dayLeft}px; opacity: 0.3;"></div>`;
+            // Daily view - show daily gridlines (weekdays only)
+            let currentDate = new Date(minDate);
+            let weekdayIndex = 0;
+            while (currentDate <= maxDate) {
+                const dayOfWeek = currentDate.getDay();
+                if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Skip weekends
+                    const dayLeft = weekdayIndex * pixelsPerDay;
+                    gridLinesHtml += `<div class="week-line" style="left: ${dayLeft}px; opacity: 0.3;"></div>`;
+                    weekdayIndex++;
+                }
+                currentDate.setDate(currentDate.getDate() + 1);
             }
         } else if (currentView === 'weekly') {
             // Weekly view - show weekly gridlines
             let currentWeekStart = new Date(minDate);
             while (currentWeekStart <= maxDate) {
-                const weekStartDay = Math.ceil((currentWeekStart - minDate) / (1000 * 60 * 60 * 24));
-                const weekLeft = weekStartDay * pixelsPerDay;
+                const weekdaysFromStart = getWeekdayPosition(minDate, currentWeekStart);
+                const weekLeft = weekdaysFromStart * pixelsPerDay;
                 gridLinesHtml += `<div class="week-line" style="left: ${weekLeft}px;"></div>`;
                 currentWeekStart.setDate(currentWeekStart.getDate() + 7);
             }
@@ -1356,15 +1361,15 @@ async function initApp() {
             // Monthly view - show monthly gridlines
             let currentMonthStart = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
             while (currentMonthStart <= maxDate) {
-                const monthStartDay = Math.ceil((currentMonthStart - minDate) / (1000 * 60 * 60 * 24));
-                const monthLeft = monthStartDay * pixelsPerDay;
-                if (monthStartDay >= 0) {
+                const weekdaysFromStart = getWeekdayPosition(minDate, currentMonthStart);
+                if (weekdaysFromStart >= 0) {
+                    const monthLeft = weekdaysFromStart * pixelsPerDay;
                     gridLinesHtml += `<div class="week-line" style="left: ${monthLeft}px;"></div>`;
                 }
                 currentMonthStart.setMonth(currentMonthStart.getMonth() + 1);
             }
         } else if (currentView === 'quarterly') {
-            // Quarterly view - show weekly gridlines (each column = 1 week)
+            // Quarterly view - show weekly gridlines (each column = 1 week of weekdays)
             let currentWeekStart = new Date(minDate);
             // Align to Monday
             const dayOfWeek = currentWeekStart.getDay();
@@ -1374,9 +1379,9 @@ async function initApp() {
             }
 
             while (currentWeekStart <= maxDate) {
-                const weekStartDay = Math.ceil((currentWeekStart - minDate) / (1000 * 60 * 60 * 24));
-                const weekLeft = weekStartDay * pixelsPerDay;
-                if (weekStartDay >= 0) {
+                const weekdaysFromStart = getWeekdayPosition(minDate, currentWeekStart);
+                if (weekdaysFromStart >= 0) {
+                    const weekLeft = weekdaysFromStart * pixelsPerDay;
                     gridLinesHtml += `<div class="week-line" style="left: ${weekLeft}px;"></div>`;
                 }
                 currentWeekStart.setDate(currentWeekStart.getDate() + 7);
@@ -1390,9 +1395,9 @@ async function initApp() {
             }
 
             while (currentYearStart <= maxDate) {
-                const yearStartDay = Math.ceil((currentYearStart - minDate) / (1000 * 60 * 60 * 24));
-                const yearLeft = yearStartDay * pixelsPerDay;
-                if (yearStartDay >= 0) {
+                const weekdaysFromStart = getWeekdayPosition(minDate, currentYearStart);
+                if (weekdaysFromStart >= 0) {
+                    const yearLeft = weekdaysFromStart * pixelsPerDay;
                     gridLinesHtml += `<div class="week-line" style="left: ${yearLeft}px;"></div>`;
                 }
                 currentYearStart = new Date(currentYearStart.getFullYear() + 1, 0, 1);
@@ -1406,8 +1411,8 @@ async function initApp() {
         let todayMarkerHtml = '';
         let todayLabelHtml = '';
         if (today >= minDate && today <= maxDate) {
-            const todayDays = Math.ceil((today - minDate) / (1000 * 60 * 60 * 24));
-            const todayLeft = todayDays * pixelsPerDay;
+            const todayWeekdays = getWeekdayPosition(minDate, today);
+            const todayLeft = todayWeekdays * pixelsPerDay;
             console.log('Adding today marker at:', todayLeft, 'px');
             gridLinesHtml += `<div class="today-marker" style="left: ${todayLeft}px;"></div>`;
             // Create label separately - add 200px offset for workstream header
@@ -1431,8 +1436,8 @@ async function initApp() {
 
             generalMilestones.forEach(item => {
                 const itemDate = parseLocalDate(item.date);
-                const daysFromStart = Math.ceil((itemDate - minDate) / (1000 * 60 * 60 * 24));
-                const left = daysFromStart * pixelsPerDay;
+                const weekdaysFromStart = getWeekdayPosition(minDate, itemDate);
+                const left = weekdaysFromStart * pixelsPerDay;
 
                 html += `
                     <div class="timeline-milestone general" style="left: ${left}px;" title="${escapeHtml(item.name)}\n${formatDate(item.date)}">
@@ -1476,8 +1481,8 @@ async function initApp() {
             // Render milestones
             milestones.forEach(item => {
                 const itemDate = parseLocalDate(item.date);
-                const daysFromStart = Math.ceil((itemDate - minDate) / (1000 * 60 * 60 * 24));
-                const left = daysFromStart * pixelsPerDay;
+                const weekdaysFromStart = getWeekdayPosition(minDate, itemDate);
+                const left = weekdaysFromStart * pixelsPerDay;
 
                 html += `
                     <div class="timeline-milestone" style="left: ${left}px;" title="${escapeHtml(item.name)}\n${formatDate(item.date)}">
@@ -1494,10 +1499,10 @@ async function initApp() {
             activities.forEach((item, activityIndex) => {
                 const start = parseLocalDate(item.startDate);
                 const end = parseLocalDate(item.endDate);
-                const daysFromStart = Math.ceil((start - minDate) / (1000 * 60 * 60 * 24));
-                const duration = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
-                const left = daysFromStart * pixelsPerDay;
-                const width = duration * pixelsPerDay;
+                const weekdaysFromStart = getWeekdayPosition(minDate, start);
+                const durationWeekdays = countWeekdays(start, end);
+                const left = weekdaysFromStart * pixelsPerDay;
+                const width = durationWeekdays * pixelsPerDay;
 
                 // Calculate text width estimates (approximate) - increased padding for better spacing
                 const textPadding = 180; // Extra space for start/end dates and label (increased from 120)
@@ -2299,6 +2304,42 @@ function getWeekdayPosition(startDate, targetDate) {
         current.setDate(current.getDate() + 1);
     }
     return position;
+}
+
+// Get weekday position (excluding weekends) from start date
+function getWeekdayPosition(startDate, targetDate) {
+    let position = 0;
+    const current = new Date(startDate);
+    current.setHours(0, 0, 0, 0);
+    const target = new Date(targetDate);
+    target.setHours(0, 0, 0, 0);
+
+    while (current < target) {
+        const dayOfWeek = current.getDay();
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Not weekend
+            position++;
+        }
+        current.setDate(current.getDate() + 1);
+    }
+    return position;
+}
+
+// Count weekdays between two dates (inclusive)
+function countWeekdays(startDate, endDate) {
+    let count = 0;
+    const current = new Date(startDate);
+    current.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(0, 0, 0, 0);
+
+    while (current <= end) {
+        const dayOfWeek = current.getDay();
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Not weekend
+            count++;
+        }
+        current.setDate(current.getDate() + 1);
+    }
+    return count;
 }
 
 // Parse date string in local timezone (avoid UTC conversion issues)
