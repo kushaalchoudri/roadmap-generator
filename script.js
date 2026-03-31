@@ -1439,9 +1439,9 @@ async function initApp() {
         html += gridLinesHtml;
         html += `</div>`;
 
-        // Add today marker container with higher z-index
+        // Add today marker container with z-index behind activity bars
         if (todayMarkerHtml) {
-            html += `<div class="timeline-today-container" style="position: absolute; top: 0; left: 200px; right: 0; bottom: 0; pointer-events: none; z-index: 5;">`;
+            html += `<div class="timeline-today-container" style="position: absolute; top: 0; left: 200px; right: 0; bottom: 0; pointer-events: none; z-index: 2;">`;
             html += todayMarkerHtml;
             html += `</div>`;
         }
@@ -1451,7 +1451,7 @@ async function initApp() {
         if (generalMilestones.length > 0) {
             // Calculate height needed for milestone rows
             const maxMilestoneRow = Math.max(...generalMilestones.map(m => m._row || 0), 0);
-            const milestoneHeight = 65 + (maxMilestoneRow * 30); // Base height + row offsets
+            const milestoneHeight = 75 + (maxMilestoneRow * 40); // Base height + row offsets (increased for wrapped text)
 
             html += `<div class="timeline-workstream" data-workstream-name="Milestones">`;
             html += `<div class="workstream-header milestones">Milestones</div>`;
@@ -1463,10 +1463,11 @@ async function initApp() {
                 const weekdaysFromStart = getWeekdayPosition(minDate, itemDate);
                 const left = weekdaysFromStart * pixelsPerDay;
 
-                // Check for overlap with previous milestones (within 14 days / ~70px)
+                // Check for overlap with previous milestones
                 let row = 0;
-                const MILESTONE_SPACING = 70; // pixels (~14 weekdays)
-                const ROW_HEIGHT = 30; // vertical offset per row
+                const MILESTONE_WIDTH = 80; // Width of milestone container
+                const MILESTONE_SPACING = MILESTONE_WIDTH + 10; // Add 10px gap
+                const ROW_HEIGHT = 40; // vertical offset per row (increased for wrapped text)
 
                 // Find available row
                 for (let checkRow = 0; checkRow < 10; checkRow++) {
@@ -1479,7 +1480,7 @@ async function initApp() {
                             const prevWeekdays = getWeekdayPosition(minDate, prevDate);
                             const prevLeft = prevWeekdays * pixelsPerDay;
 
-                            // Check if within spacing distance
+                            // Check if within spacing distance (accounting for full width)
                             if (Math.abs(left - prevLeft) < MILESTONE_SPACING) {
                                 hasOverlap = true;
                                 break;
@@ -1495,7 +1496,7 @@ async function initApp() {
                 const topOffset = row * ROW_HEIGHT;
 
                 html += `
-                    <div class="timeline-milestone general" style="left: ${left}px; top: ${5 + topOffset}px;" title="${escapeHtml(item.name)}\n${formatDate(item.date)}">
+                    <div class="timeline-milestone general" style="left: ${left - MILESTONE_WIDTH/2 + 10}px; top: ${5 + topOffset}px;" title="${escapeHtml(item.name)}\n${formatDate(item.date)}">
                         <div class="milestone-diamond"></div>
                         <div class="milestone-label">${escapeHtml(item.name)}</div>
                         <div class="milestone-date">${formatDateShort(item.date)}</div>
@@ -1540,10 +1541,11 @@ async function initApp() {
                 const weekdaysFromStart = getWeekdayPosition(minDate, itemDate);
                 const left = weekdaysFromStart * pixelsPerDay;
 
-                // Check for overlap with previous milestones (within 14 days / ~70px)
+                // Check for overlap with previous milestones
                 let row = 0;
-                const MILESTONE_SPACING = 70; // pixels (~14 weekdays)
-                const ROW_HEIGHT = 30; // vertical offset per row
+                const MILESTONE_WIDTH = 80; // Width of milestone container
+                const MILESTONE_SPACING = MILESTONE_WIDTH + 10; // Add 10px gap
+                const ROW_HEIGHT = 40; // vertical offset per row (increased for wrapped text)
 
                 // Find available row
                 for (let checkRow = 0; checkRow < 10; checkRow++) {
@@ -1556,7 +1558,7 @@ async function initApp() {
                             const prevWeekdays = getWeekdayPosition(minDate, prevDate);
                             const prevLeft = prevWeekdays * pixelsPerDay;
 
-                            // Check if within spacing distance
+                            // Check if within spacing distance (accounting for full width)
                             if (Math.abs(left - prevLeft) < MILESTONE_SPACING) {
                                 hasOverlap = true;
                                 break;
@@ -1572,7 +1574,7 @@ async function initApp() {
                 const topOffset = row * ROW_HEIGHT;
 
                 html += `
-                    <div class="timeline-milestone" style="left: ${left}px; top: ${5 + topOffset}px;" title="${escapeHtml(item.name)}\n${formatDate(item.date)}">
+                    <div class="timeline-milestone" style="left: ${left - MILESTONE_WIDTH/2 + 10}px; top: ${5 + topOffset}px;" title="${escapeHtml(item.name)}\n${formatDate(item.date)}">
                         <div class="milestone-diamond"></div>
                         <div class="milestone-label">${escapeHtml(item.name)}</div>
                         <div class="milestone-date">${formatDateShort(item.date)}</div>
@@ -1694,7 +1696,7 @@ async function initApp() {
             const maxRow = Math.max(...activities.map(a => a.assignedRow || 0), -1) + 1;
             const totalActivityHeight = maxRow * 70; // Updated to match new spacing
             const maxMilestoneRow = milestones.length > 0 ? Math.max(...milestones.map(m => m._row || 0), 0) : 0;
-            const milestoneHeight = milestones.length > 0 ? (65 + maxMilestoneRow * 30) : 0;
+            const milestoneHeight = milestones.length > 0 ? (75 + maxMilestoneRow * 40) : 0; // Increased for wrapped text
             const barHeight = 24; // Height of activity bar
             const labelAboveHeight = 20; // Height of label when positioned above bar
             const dateBelowHeight = 20; // Additional space for dates below bars

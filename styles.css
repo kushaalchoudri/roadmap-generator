@@ -987,16 +987,17 @@ textarea {
     position: relative;
     min-height: 100px;
     padding-top: 40px; /* Space for TODAY label at top - reduced to better align */
-    overflow: hidden; /* Prevent overflow beyond border */
-    background: white; /* White background */
+    overflow: visible; /* Allow gridlines to show through */
+    background: transparent; /* Transparent to show gridlines */
     width: 100%; /* Ensure it fills the container */
     border-bottom: 3px solid #1e3a8a; /* Dark blue separator between workstreams */
 }
 
 .timeline-milestone {
     position: absolute;
-    width: 20px;
-    height: 55px;
+    width: 80px; /* Increased to match label width */
+    height: auto; /* Auto height for wrapped text */
+    min-height: 70px; /* Minimum height */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1252,7 +1253,7 @@ textarea {
     top: 0;
     bottom: 0;
     pointer-events: none;
-    z-index: 5; /* Above activity bars */
+    z-index: 2; /* Behind activity bars (z-index: 3) but above gridlines */
     box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
 }
 
@@ -1362,7 +1363,11 @@ textarea {
     font-size: 10px;
     font-weight: 600;
     color: #000;
-    white-space: nowrap;
+    white-space: normal; /* Allow wrapping */
+    word-wrap: break-word;
+    max-width: 80px; /* Limit width to force wrapping */
+    text-align: center;
+    line-height: 1.2;
     background: transparent;
     padding: 0;
     border-radius: 0;
