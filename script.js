@@ -1716,10 +1716,36 @@ async function initApp() {
             const totalActivityHeight = maxRow * 70; // Updated to match new spacing
             const maxMilestoneRow = milestones.length > 0 ? Math.max(...milestones.map(m => m._row || 0), 0) : 0;
             const milestoneHeight = milestones.length > 0 ? (75 + maxMilestoneRow * 40) : 0; // Increased for wrapped text
-            const barHeight = 24; // Height of activity bar
+
+            // Check if any activity has milestone overlap (needs extra 40px)
+            let maxMilestoneOffset = 0;
+            activities.forEach(activity => {
+                const start = parseLocalDate(activity.startDate);
+                const end = parseLocalDate(activity.endDate);
+                const weekdaysFromStart = getWeekdayPosition(minDate, start);
+                const durationWeekdays = countWeekdays(start, end);
+                const activityLeft = weekdaysFromStart * pixelsPerDay;
+                const activityWidth = durationWeekdays * pixelsPerDay;
+
+                // Check overlap with milestones
+                const MILESTONE_WIDTH = 90;
+                for (const milestone of milestones) {
+                    const milestoneDate = parseLocalDate(milestone.date);
+                    const milestoneWeekdays = getWeekdayPosition(minDate, milestoneDate);
+                    const milestoneLeft = milestoneWeekdays * pixelsPerDay;
+
+                    if (!(activityLeft > milestoneLeft + MILESTONE_WIDTH || activityLeft + activityWidth < milestoneLeft - MILESTONE_WIDTH)) {
+                        maxMilestoneOffset = 40;
+                        break;
+                    }
+                }
+            });
+
+            const barHeight = 40; // Height of activity bar (increased from 24)
             const labelAboveHeight = 20; // Height of label when positioned above bar
             const dateBelowHeight = 20; // Additional space for dates below bars
-            const minHeight = Math.max(milestoneHeight + totalActivityHeight + barHeight + labelAboveHeight + dateBelowHeight + 30, 100); // Increased padding
+            const bottomPadding = 50; // Extra padding to prevent bars touching border
+            const minHeight = Math.max(milestoneHeight + totalActivityHeight + barHeight + labelAboveHeight + dateBelowHeight + maxMilestoneOffset + bottomPadding, 100);
 
             html += `</div>`;
             // Add resize handle (vertical only for workstreams)
