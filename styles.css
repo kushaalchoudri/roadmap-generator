@@ -1400,9 +1400,6 @@ textarea {
     font-weight: 600;
     color: #000;
     white-space: nowrap; /* No wrapping */
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 70px; /* Reduced from 80px to make more compact */
     text-align: center;
     background: transparent;
     padding: 0;

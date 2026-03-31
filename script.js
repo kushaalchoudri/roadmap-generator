@@ -381,6 +381,7 @@ async function initApp() {
             }
             zoomLevel = Math.min(zoomLevel + 1, 3); // Max zoom in level: +3
             renderTimeline();
+            updateZoomButtonStates();
         });
     }
 
@@ -394,6 +395,7 @@ async function initApp() {
             }
             zoomLevel = Math.max(zoomLevel - 1, -5); // Max zoom out level: -5
             renderTimeline();
+            updateZoomButtonStates();
         });
     }
 
@@ -403,6 +405,7 @@ async function initApp() {
         resetZoomBtn.addEventListener('click', () => {
             zoomLevel = 0;
             renderTimeline();
+            updateZoomButtonStates();
         });
     }
 
@@ -953,6 +956,49 @@ async function initApp() {
         return html;
     }
 
+    // Update zoom button states based on whether timeline fits in viewport
+    function updateZoomButtonStates() {
+        const zoomInBtn = document.getElementById('zoomInBtn');
+        const zoomOutBtn = document.getElementById('zoomOutBtn');
+        const timelineCanvas = document.getElementById('timeline');
+
+        if (!timelineCanvas || !zoomInBtn || !zoomOutBtn) return;
+
+        // Get the bordered container which is the actual roadmap
+        const borderedContainer = timelineCanvas.querySelector('.timeline-bordered-container');
+        if (!borderedContainer) return;
+
+        // Get viewport (visible area) and content dimensions
+        const viewportWidth = timelineCanvas.clientWidth;
+        const contentWidth = borderedContainer.scrollWidth;
+
+        // Zoom out should be disabled when entire roadmap fits in viewport
+        // (with some tolerance for padding/margins)
+        const fitsInViewport = contentWidth <= viewportWidth - 50;
+
+        if (fitsInViewport) {
+            zoomOutBtn.disabled = true;
+            zoomOutBtn.style.opacity = '0.4';
+            zoomOutBtn.style.cursor = 'not-allowed';
+        } else {
+            zoomOutBtn.disabled = false;
+            zoomOutBtn.style.opacity = '1';
+            zoomOutBtn.style.cursor = 'pointer';
+        }
+
+        // Zoom in should be disabled at maximum zoom level
+        // Maximum zoom is +3
+        if (zoomLevel >= 3) {
+            zoomInBtn.disabled = true;
+            zoomInBtn.style.opacity = '0.4';
+            zoomInBtn.style.cursor = 'not-allowed';
+        } else {
+            zoomInBtn.disabled = false;
+            zoomInBtn.style.opacity = '1';
+            zoomInBtn.style.cursor = 'pointer';
+        }
+    }
+
     // Enhanced renderTimeline function with drag-and-drop, view modes, today marker, and smart positioning
     function renderTimeline() {
         try {
@@ -1398,14 +1444,11 @@ async function initApp() {
         today.setHours(0, 0, 0, 0);
         console.log('Today date:', today, 'Min:', minDate, 'Max:', maxDate);
         let todayMarkerHtml = '';
-        let todayLabelHtml = '';
         if (today >= minDate && today <= maxDate) {
             const todayWeekdays = getWeekdayPosition(minDate, today);
             const todayLeft = todayWeekdays * pixelsPerDay;
             console.log('Adding today marker at:', todayLeft, 'px');
             todayMarkerHtml = `<div class="today-marker" style="left: ${todayLeft}px;"></div>`;
-            // Create label separately - add 200px offset for workstream header
-            todayLabelHtml = `<div class="today-marker-label" style="left: ${200 + todayLeft}px;">TODAY</div>`;
         } else {
             console.log('Today is outside timeline range');
         }
@@ -1678,14 +1721,6 @@ async function initApp() {
         html += '<div class="timeline-border-resize-handle" title="Drag to extend timeline"></div>'; // Add horizontal resize handle to border
         html += '</div>'; // Close timeline-bordered-container
 
-        // Add TODAY label below all workstreams in white space above border
-        if (todayLabelHtml) {
-            const todayDays = Math.ceil((today - minDate) / (1000 * 60 * 60 * 24));
-            const todayLeft = todayDays * pixelsPerDay;
-            // Position label below the bordered container with 15px padding from bottom
-            html += `<div class="today-marker-label-bottom" style="left: ${200 + todayLeft}px; top: ${totalTimelineHeight + 15}px;">TODAY</div>`;
-        }
-
         html += '</div>'; // Close timeline-content
         timelineCanvas.innerHTML = html;
 
@@ -1694,6 +1729,9 @@ async function initApp() {
 
         // Add workstream resize functionality
         initWorkstreamResize();
+
+        // Update zoom button states based on viewport
+        updateZoomButtonStates();
         } catch (error) {
             console.error('Error in renderTimeline:', error);
             timelineCanvas.innerHTML = `
