@@ -1604,7 +1604,7 @@ async function initApp() {
 
             // Step 2: Assign rows using the new algorithm
             const ACTIVITY_ROW_HEIGHT = 45; // Full height row for activities
-            const SPACING_ROW_HEIGHT = 22; // Half height row for spacing
+            const SPACING_ROW_HEIGHT = 13; // Reduced from 22 to 13 (40% reduction)
             let currentPhysicalRow = 0; // Tracks actual physical row position
 
             allItems.forEach((item, index) => {
@@ -1618,13 +1618,21 @@ async function initApp() {
                     const currentStart = parseLocalDate(item.startDate || item.date);
                     const prevEnd = parseLocalDate(prevItem.endDate || prevItem.date);
 
-                    // Check if current starts after previous ends (no overlap)
-                    if (currentStart > prevEnd) {
-                        // Can place in same logical row as previous
+                    // Calculate next workday after previous ends
+                    const nextWorkday = new Date(prevEnd);
+                    nextWorkday.setDate(nextWorkday.getDate() + 1);
+                    // Skip weekends
+                    while (nextWorkday.getDay() === 0 || nextWorkday.getDay() === 6) {
+                        nextWorkday.setDate(nextWorkday.getDate() + 1);
+                    }
+
+                    // Check if current starts AFTER next workday (has gap)
+                    if (currentStart > nextWorkday) {
+                        // Has gap - can place in same logical row as previous
                         item.assignedRow = prevItem.assignedRow;
                         item.physicalRow = prevItem.physicalRow;
                     } else {
-                        // Overlaps - needs new row
+                        // Adjacent or overlapping - needs new row
                         // Skip one spacing row, then place in next activity row
                         currentPhysicalRow = prevItem.physicalRow + ACTIVITY_ROW_HEIGHT + SPACING_ROW_HEIGHT;
                         item.assignedRow = prevItem.assignedRow + 1;
@@ -1786,7 +1794,8 @@ async function initApp() {
             const startHandle = bar.querySelector('.timeline-bar-drag-handle-start');
             const endHandle = bar.querySelector('.timeline-bar-drag-handle-end');
 
-            // Drag entire bar to move
+            // Drag entire bar to move - DISABLED to prevent accidental moves
+            /*
             bar.addEventListener('mousedown', (e) => {
                 if (e.target.classList.contains('timeline-bar-drag-handle-start') ||
                     e.target.classList.contains('timeline-bar-drag-handle-end')) {
@@ -1848,6 +1857,7 @@ async function initApp() {
                 document.addEventListener('mousemove', onMouseMove);
                 document.addEventListener('mouseup', onMouseUp);
             });
+            */
 
             // Resize from start
             if (startHandle) {

@@ -1378,11 +1378,11 @@ textarea {
     font-size: 9px; /* Reduced from 10px */
     font-weight: 600;
     color: #000;
-    white-space: normal; /* Allow wrapping */
-    word-wrap: break-word;
+    white-space: nowrap; /* No wrapping */
+    overflow: hidden;
+    text-overflow: ellipsis;
     max-width: 70px; /* Reduced from 80px to make more compact */
     text-align: center;
-    line-height: 1.1; /* Tighter line height from 1.2 */
     background: transparent;
     padding: 0;
     border-radius: 0;
