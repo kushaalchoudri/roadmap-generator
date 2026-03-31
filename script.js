@@ -896,9 +896,8 @@ async function initApp() {
         }
 
         // Render based on view mode
-        html += '<div class="timeline-header-hierarchical" style="display: flex;">';
-        html += '<div class="timeline-left-spacer"></div>';
-        html += '<div class="timeline-headers-container" style="width: ' + timelineWidth + 'px; overflow: hidden;">';
+        html += '<div class="timeline-header-hierarchical" style="display: flex; flex-direction: column;">';
+        html += '<div class="timeline-headers-container" style="overflow: hidden;">';
 
         if (displayMode === 'weeks') {
             // Zoomed out mode - show only week numbers
@@ -946,29 +945,29 @@ async function initApp() {
             // Normal hierarchical views - only show rows that have enough space
             if (currentView === 'daily') {
                 // 5 rows: Year, Quarter, Month, Week, Date
-                if (canShowYears) html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white');
-                if (canShowQuarters) html += renderHeaderRow(quarterSpans, pixelsPerDay, span => `Q${span.quarter}`, '#764ba2', 'white');
-                if (canShowMonths) html += renderHeaderRow(monthSpans, pixelsPerDay, span => span.monthName, '#48bb78', 'white');
-                if (canShowWeeks) html += renderHeaderRow(weekSpans, pixelsPerDay, span => `W${span.weekNum}`, '#4299e1', 'white');
-                if (canShowDates) html += renderHeaderRow(daySpans, pixelsPerDay, span => span.date, '#e5e7eb', '#2d3748');
+                if (canShowYears) html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white', 'Year');
+                if (canShowQuarters) html += renderHeaderRow(quarterSpans, pixelsPerDay, span => `Q${span.quarter}`, '#764ba2', 'white', 'Quarter');
+                if (canShowMonths) html += renderHeaderRow(monthSpans, pixelsPerDay, span => span.monthName, '#48bb78', 'white', 'Month');
+                if (canShowWeeks) html += renderHeaderRow(weekSpans, pixelsPerDay, span => `W${span.weekNum}`, '#4299e1', 'white', 'Calendar Week');
+                if (canShowDates) html += renderHeaderRow(daySpans, pixelsPerDay, span => span.date, '#e5e7eb', '#2d3748', 'Date');
             } else if (currentView === 'weekly') {
                 // 4 rows: Year, Quarter, Month, Week
-                if (canShowYears) html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white');
-                if (canShowQuarters) html += renderHeaderRow(quarterSpans, pixelsPerDay, span => `Q${span.quarter}`, '#764ba2', 'white');
-                if (canShowMonths) html += renderHeaderRow(monthSpans, pixelsPerDay, span => span.monthName, '#48bb78', 'white');
-                if (canShowWeeks) html += renderHeaderRow(weekSpans, pixelsPerDay, span => `W${span.weekNum}`, '#4299e1', 'white');
+                if (canShowYears) html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white', 'Year');
+                if (canShowQuarters) html += renderHeaderRow(quarterSpans, pixelsPerDay, span => `Q${span.quarter}`, '#764ba2', 'white', 'Quarter');
+                if (canShowMonths) html += renderHeaderRow(monthSpans, pixelsPerDay, span => span.monthName, '#48bb78', 'white', 'Month');
+                if (canShowWeeks) html += renderHeaderRow(weekSpans, pixelsPerDay, span => `W${span.weekNum}`, '#4299e1', 'white', 'Calendar Week');
             } else if (currentView === 'monthly') {
                 // 3 rows: Year, Quarter, Month
-                if (canShowYears) html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white');
-                if (canShowQuarters) html += renderHeaderRow(quarterSpans, pixelsPerDay, span => `Q${span.quarter}`, '#764ba2', 'white');
-                if (canShowMonths) html += renderHeaderRow(monthSpans, pixelsPerDay, span => span.monthName, '#48bb78', 'white');
+                if (canShowYears) html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white', 'Year');
+                if (canShowQuarters) html += renderHeaderRow(quarterSpans, pixelsPerDay, span => `Q${span.quarter}`, '#764ba2', 'white', 'Quarter');
+                if (canShowMonths) html += renderHeaderRow(monthSpans, pixelsPerDay, span => span.monthName, '#48bb78', 'white', 'Month');
             } else if (currentView === 'quarterly') {
                 // 2 rows: Year, Quarter
-                if (canShowYears) html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white');
-                if (canShowQuarters) html += renderHeaderRow(quarterSpans, pixelsPerDay, span => `Q${span.quarter}`, '#764ba2', 'white');
+                if (canShowYears) html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white', 'Year');
+                if (canShowQuarters) html += renderHeaderRow(quarterSpans, pixelsPerDay, span => `Q${span.quarter}`, '#764ba2', 'white', 'Quarter');
             } else if (currentView === 'yearly') {
                 // 1 row: Year only
-                if (canShowYears) html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white');
+                if (canShowYears) html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white', 'Year');
             }
         }
 
@@ -976,8 +975,14 @@ async function initApp() {
         return html;
     }
 
-    function renderHeaderRow(spans, pixelsPerDay, labelFunc, bgColor, textColor) {
+    function renderHeaderRow(spans, pixelsPerDay, labelFunc, bgColor, textColor, rowLabel) {
         let html = '<div class="timeline-header-row" style="display: flex; border-bottom: 1px solid #e2e8f0;">';
+
+        // Add row label on the left (in the spacer area)
+        if (rowLabel) {
+            html += `<div class="timeline-row-label" style="width: 200px; min-width: 200px; padding: 8px 12px; text-align: right; font-size: 11px; font-weight: 700; background: #f8fafc; color: #334155; border-right: 2px solid #cbd5e1; display: flex; align-items: center; justify-content: flex-end;">${rowLabel}</div>`;
+        }
+
         spans.forEach(span => {
             const width = (span.endDay - span.startDay + 1) * pixelsPerDay;
             const label = labelFunc(span);
@@ -1424,6 +1429,12 @@ async function initApp() {
 
         // General milestones section and workstreams (inside the border)
         html += `<div class="timeline-grid" style="position: relative;">`;
+
+        // Add column header row for "Workstream Name"
+        html += `<div class="timeline-column-header-row" style="display: flex; position: sticky; top: 0; z-index: 15; border-bottom: 2px solid #cbd5e1;">`;
+        html += `<div class="timeline-column-header" style="width: 200px; min-width: 200px; padding: 10px 12px; text-align: center; font-size: 12px; font-weight: 700; background: #1e40af; color: white; border-right: 2px solid #cbd5e1;">Workstream Name</div>`;
+        html += `<div style="flex: 1; background: #f8fafc;"></div>`; // Empty space for timeline content
+        html += `</div>`;
 
         // Add vertical lines and today marker - GLOBAL container spanning entire timeline
         let gridLinesHtml = '';
