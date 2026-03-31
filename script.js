@@ -1661,8 +1661,17 @@ async function initApp() {
             </div>`;
 
             // NEW ROW-BASED PLACEMENT SYSTEM
-            // Step 1: Sort all items (activities + milestones) by start date
+            // Step 1: Sort all items - MILESTONES FIRST, then activities
+            // Within each type, sort by date
             const allItems = [...activities, ...milestones].sort((a, b) => {
+                // First, prioritize milestones over activities
+                const aIsMilestone = a.type === 'milestone';
+                const bIsMilestone = b.type === 'milestone';
+
+                if (aIsMilestone && !bIsMilestone) return -1; // a (milestone) comes before b (activity)
+                if (!aIsMilestone && bIsMilestone) return 1;  // b (milestone) comes before a (activity)
+
+                // If both are same type, sort by date
                 const dateA = parseLocalDate(a.startDate || a.date);
                 const dateB = parseLocalDate(b.startDate || b.date);
                 return dateA - dateB;
