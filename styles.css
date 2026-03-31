@@ -995,7 +995,7 @@ textarea {
 
 .timeline-milestone {
     position: absolute;
-    width: 80px; /* Increased to match label width */
+    width: 80px; /* Width to accommodate wrapped text */
     height: auto; /* Auto height for wrapped text */
     min-height: 70px; /* Minimum height */
     display: flex;
@@ -1004,10 +1004,21 @@ textarea {
     cursor: pointer;
     top: 5px;
     z-index: 5;
+    left: 0; /* Explicit positioning */
 }
 
 .timeline-milestone.general {
     top: 5px; /* General milestones in milestone section */
+}
+
+.milestone-diamond {
+    width: 20px;
+    height: 20px;
+    background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
+    transform: rotate(45deg);
+    box-shadow: 0 3px 8px rgba(249, 115, 22, 0.4);
+    border: 2px solid #fff;
+    flex-shrink: 0; /* Prevent shrinking */
 }
 
 /* Activity bar - simple 2pt line design */

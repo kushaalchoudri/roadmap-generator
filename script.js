@@ -1643,8 +1643,27 @@ async function initApp() {
                     }
                 }
 
-                const milestoneHeight = milestones.length > 0 ? 65 : 0;
-                const top = milestoneHeight + (item.assignedRow * 70) + 30; // Increased spacing from 50 to 70, and offset from 10 to 30 to start below Today label
+                const maxMilestoneRow = milestones.length > 0 ? Math.max(...milestones.map(m => m._row || 0), 0) : 0;
+                const milestoneHeight = milestones.length > 0 ? (75 + maxMilestoneRow * 40) : 0; // Account for wrapped text rows
+
+                // Check if activity overlaps with any milestone in same workstream
+                let hasOverlapWithMilestone = false;
+                const MILESTONE_WIDTH = 90; // Full milestone width including spacing
+                for (const milestone of milestones) {
+                    const milestoneDate = parseLocalDate(milestone.date);
+                    const milestoneWeekdays = getWeekdayPosition(minDate, milestoneDate);
+                    const milestoneLeft = milestoneWeekdays * pixelsPerDay;
+
+                    // Check if activity bar overlaps with milestone
+                    if (!(left > milestoneLeft + MILESTONE_WIDTH || left + width < milestoneLeft - MILESTONE_WIDTH)) {
+                        hasOverlapWithMilestone = true;
+                        break;
+                    }
+                }
+
+                // Add extra offset if overlapping with milestone
+                const milestoneOffset = hasOverlapWithMilestone ? 40 : 0;
+                const top = milestoneHeight + (item.assignedRow * 70) + 30 + milestoneOffset; // Add offset if overlapping milestone
                 const status = item.status || 'not-started';
                 const startDateStr = formatDateShort(item.startDate);
                 const endDateStr = formatDateShort(item.endDate);
@@ -2474,7 +2493,9 @@ function formatDate(dateString) {
 function formatDateShort(dateString) {
     const date = parseLocalDate(dateString);
     if (!date) return '';
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    return `${day}/${month}`;
 }
 
 function escapeHtml(text) {
