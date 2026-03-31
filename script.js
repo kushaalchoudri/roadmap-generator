@@ -909,32 +909,66 @@ async function initApp() {
             });
             html += '</div>';
         } else {
-            // Normal hierarchical views
+            // Calculate minimum widths needed for each type of content to be readable
+            // These are based on actual character widths and font sizes
+            const minWidthForDate = 22;     // "1" or "31" needs ~20-22px
+            const minWidthForWeek = 28;     // "W52" needs ~28px
+            const minWidthForMonth = 30;    // "Jan" needs ~30px
+            const minWidthForQuarter = 28;  // "Q4" needs ~28px
+            const minWidthForYear = 40;     // "2024" needs ~40px
+
+            // Check minimum width for each span type
+            const canShowDates = daySpans.length > 0 && daySpans.every(span => {
+                const width = (span.endDay - span.startDay + 1) * pixelsPerDay;
+                return width >= minWidthForDate;
+            });
+
+            const canShowWeeks = weekSpans.length > 0 && weekSpans.every(span => {
+                const width = (span.endDay - span.startDay + 1) * pixelsPerDay;
+                return width >= minWidthForWeek;
+            });
+
+            const canShowMonths = monthSpans.length > 0 && monthSpans.every(span => {
+                const width = (span.endDay - span.startDay + 1) * pixelsPerDay;
+                return width >= minWidthForMonth;
+            });
+
+            const canShowQuarters = quarterSpans.length > 0 && quarterSpans.every(span => {
+                const width = (span.endDay - span.startDay + 1) * pixelsPerDay;
+                return width >= minWidthForQuarter;
+            });
+
+            const canShowYears = yearSpans.length > 0 && yearSpans.every(span => {
+                const width = (span.endDay - span.startDay + 1) * pixelsPerDay;
+                return width >= minWidthForYear;
+            });
+
+            // Normal hierarchical views - only show rows that have enough space
             if (currentView === 'daily') {
                 // 5 rows: Year, Quarter, Month, Week, Date
-                html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white');
-                html += renderHeaderRow(quarterSpans, pixelsPerDay, span => `Q${span.quarter}`, '#764ba2', 'white');
-                html += renderHeaderRow(monthSpans, pixelsPerDay, span => span.monthName, '#48bb78', 'white');
-                html += renderHeaderRow(weekSpans, pixelsPerDay, span => `W${span.weekNum}`, '#4299e1', 'white');
-                html += renderHeaderRow(daySpans, pixelsPerDay, span => span.date, '#e5e7eb', '#2d3748');
+                if (canShowYears) html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white');
+                if (canShowQuarters) html += renderHeaderRow(quarterSpans, pixelsPerDay, span => `Q${span.quarter}`, '#764ba2', 'white');
+                if (canShowMonths) html += renderHeaderRow(monthSpans, pixelsPerDay, span => span.monthName, '#48bb78', 'white');
+                if (canShowWeeks) html += renderHeaderRow(weekSpans, pixelsPerDay, span => `W${span.weekNum}`, '#4299e1', 'white');
+                if (canShowDates) html += renderHeaderRow(daySpans, pixelsPerDay, span => span.date, '#e5e7eb', '#2d3748');
             } else if (currentView === 'weekly') {
                 // 4 rows: Year, Quarter, Month, Week
-                html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white');
-                html += renderHeaderRow(quarterSpans, pixelsPerDay, span => `Q${span.quarter}`, '#764ba2', 'white');
-                html += renderHeaderRow(monthSpans, pixelsPerDay, span => span.monthName, '#48bb78', 'white');
-                html += renderHeaderRow(weekSpans, pixelsPerDay, span => `W${span.weekNum}`, '#4299e1', 'white');
+                if (canShowYears) html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white');
+                if (canShowQuarters) html += renderHeaderRow(quarterSpans, pixelsPerDay, span => `Q${span.quarter}`, '#764ba2', 'white');
+                if (canShowMonths) html += renderHeaderRow(monthSpans, pixelsPerDay, span => span.monthName, '#48bb78', 'white');
+                if (canShowWeeks) html += renderHeaderRow(weekSpans, pixelsPerDay, span => `W${span.weekNum}`, '#4299e1', 'white');
             } else if (currentView === 'monthly') {
                 // 3 rows: Year, Quarter, Month
-                html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white');
-                html += renderHeaderRow(quarterSpans, pixelsPerDay, span => `Q${span.quarter}`, '#764ba2', 'white');
-                html += renderHeaderRow(monthSpans, pixelsPerDay, span => span.monthName, '#48bb78', 'white');
+                if (canShowYears) html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white');
+                if (canShowQuarters) html += renderHeaderRow(quarterSpans, pixelsPerDay, span => `Q${span.quarter}`, '#764ba2', 'white');
+                if (canShowMonths) html += renderHeaderRow(monthSpans, pixelsPerDay, span => span.monthName, '#48bb78', 'white');
             } else if (currentView === 'quarterly') {
                 // 2 rows: Year, Quarter
-                html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white');
-                html += renderHeaderRow(quarterSpans, pixelsPerDay, span => `Q${span.quarter}`, '#764ba2', 'white');
+                if (canShowYears) html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white');
+                if (canShowQuarters) html += renderHeaderRow(quarterSpans, pixelsPerDay, span => `Q${span.quarter}`, '#764ba2', 'white');
             } else if (currentView === 'yearly') {
                 // 1 row: Year only
-                html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white');
+                if (canShowYears) html += renderHeaderRow(yearSpans, pixelsPerDay, span => span.year, '#667eea', 'white');
             }
         }
 
