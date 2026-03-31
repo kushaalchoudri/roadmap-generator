@@ -1527,9 +1527,9 @@ async function initApp() {
                         if (prevItem.assignedRow === rowIndex) {
                             // Use weekday-based positioning to match actual rendering
                             const prevStart = parseLocalDate(prevItem.startDate);
-                            const prevEnd = parseLocalDate(prevItem.endDate);
+                            const prevEndDate = parseLocalDate(prevItem.endDate);
                             const prevWeekdaysFromStart = getWeekdayPosition(minDate, prevStart);
-                            const prevDurationWeekdays = countWeekdays(prevStart, prevEnd);
+                            const prevDurationWeekdays = countWeekdays(prevStart, prevEndDate);
                             const prevLeft = prevWeekdaysFromStart * pixelsPerDay;
                             const prevWidth = prevDurationWeekdays * pixelsPerDay;
                             const prevVisualWidth = prevWidth + textPadding;
