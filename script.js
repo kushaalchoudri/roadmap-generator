@@ -1719,38 +1719,6 @@ async function initApp() {
             html += `<div class="workstream-rows" style="position: relative; min-height: ${calculatedMinHeight}px;">`;
             // Gridlines are now in global container, not here
 
-                    // Calculate next workday after previous ends
-                    const nextWorkday = new Date(prevEnd);
-                    nextWorkday.setDate(nextWorkday.getDate() + 1);
-                    // Skip weekends
-                    while (nextWorkday.getDay() === 0 || nextWorkday.getDay() === 6) {
-                        nextWorkday.setDate(nextWorkday.getDate() + 1);
-                    }
-
-                    // IMPORTANT: Milestones must ALWAYS be in separate rows
-                    // Check if current item is a milestone OR previous item is a milestone
-                    const currentIsMilestone = item.type === 'milestone';
-                    const prevIsMilestone = prevItem.type === 'milestone';
-
-                    if (currentIsMilestone || prevIsMilestone) {
-                        // If either current or previous is a milestone, always use a new row
-                        currentPhysicalRow = prevItem.physicalRow + ACTIVITY_ROW_HEIGHT + SPACING_ROW_HEIGHT;
-                        item.assignedRow = prevItem.assignedRow + 1;
-                        item.physicalRow = currentPhysicalRow;
-                    } else if (currentStart > nextWorkday) {
-                        // Both are activities with a gap - can place in same logical row as previous
-                        item.assignedRow = prevItem.assignedRow;
-                        item.physicalRow = prevItem.physicalRow;
-                    } else {
-                        // Both are activities, adjacent or overlapping - needs new row
-                        // Skip one spacing row, then place in next activity row
-                        currentPhysicalRow = prevItem.physicalRow + ACTIVITY_ROW_HEIGHT + SPACING_ROW_HEIGHT;
-                        item.assignedRow = prevItem.assignedRow + 1;
-                        item.physicalRow = currentPhysicalRow;
-                    }
-                }
-            });
-
             // Step 3: Render milestones with their assigned physical rows
             milestones.forEach(item => {
                 const itemDate = parseLocalDate(item.date);
