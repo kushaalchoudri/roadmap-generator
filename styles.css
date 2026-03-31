@@ -1009,15 +1009,6 @@ textarea {
     top: 5px; /* General milestones in milestone section */
 }
 
-/* Milestone positioning for overlap avoidance */
-.timeline-milestone.milestone-above .milestone-label {
-    order: -1; /* Move label above diamond */
-}
-
-.timeline-milestone.milestone-below .milestone-label {
-    order: 1; /* Keep label below diamond (default) */
-}
-
 /* Activity bar - simple 2pt line design */
 .timeline-bar {
     position: absolute;
@@ -1261,7 +1252,7 @@ textarea {
     top: 0;
     bottom: 0;
     pointer-events: none;
-    z-index: 5;
+    z-index: 5; /* Above activity bars */
     box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
 }
 

@@ -1427,24 +1427,35 @@ async function initApp() {
             const todayWeekdays = getWeekdayPosition(minDate, today);
             const todayLeft = todayWeekdays * pixelsPerDay;
             console.log('Adding today marker at:', todayLeft, 'px');
-            gridLinesHtml += `<div class="today-marker" style="left: ${todayLeft}px;"></div>`;
+            todayMarkerHtml = `<div class="today-marker" style="left: ${todayLeft}px;"></div>`;
             // Create label separately - add 200px offset for workstream header
             todayLabelHtml = `<div class="today-marker-label" style="left: ${200 + todayLeft}px;">TODAY</div>`;
         } else {
             console.log('Today is outside timeline range');
         }
 
-        // Add global gridlines container that spans entire timeline height
+        // Add global gridlines container that spans entire timeline height (background)
         html += `<div class="timeline-gridlines-container" style="position: absolute; top: 0; left: 200px; right: 0; bottom: 0; pointer-events: none; z-index: 0;">`;
         html += gridLinesHtml;
         html += `</div>`;
 
+        // Add today marker container with higher z-index
+        if (todayMarkerHtml) {
+            html += `<div class="timeline-today-container" style="position: absolute; top: 0; left: 200px; right: 0; bottom: 0; pointer-events: none; z-index: 5;">`;
+            html += todayMarkerHtml;
+            html += `</div>`;
+        }
+
         // General milestones
         let isFirstWorkstream = true;
         if (generalMilestones.length > 0) {
+            // Calculate height needed for milestone rows
+            const maxMilestoneRow = Math.max(...generalMilestones.map(m => m._row || 0), 0);
+            const milestoneHeight = 65 + (maxMilestoneRow * 30); // Base height + row offsets
+
             html += `<div class="timeline-workstream" data-workstream-name="Milestones">`;
             html += `<div class="workstream-header milestones">Milestones</div>`;
-            html += `<div class="workstream-rows" style="min-height: 65px; position: relative;">`;
+            html += `<div class="workstream-rows" style="min-height: ${milestoneHeight}px; position: relative;">`;
             // Gridlines are now in global container, not here
 
             generalMilestones.forEach((item, index) => {
@@ -1452,25 +1463,39 @@ async function initApp() {
                 const weekdaysFromStart = getWeekdayPosition(minDate, itemDate);
                 const left = weekdaysFromStart * pixelsPerDay;
 
-                // Check for overlap with previous milestones
-                let positionClass = '';
-                if (index > 0) {
-                    const prevItem = generalMilestones[index - 1];
-                    const prevDate = parseLocalDate(prevItem.date);
-                    const prevWeekdays = getWeekdayPosition(minDate, prevDate);
-                    const prevLeft = prevWeekdays * pixelsPerDay;
+                // Check for overlap with previous milestones (within 14 days / ~70px)
+                let row = 0;
+                const MILESTONE_SPACING = 70; // pixels (~14 weekdays)
+                const ROW_HEIGHT = 30; // vertical offset per row
 
-                    // If milestones are close (within 80px), alternate positioning
-                    if (Math.abs(left - prevLeft) < 80) {
-                        // Check if previous had alternate positioning
-                        const prevClass = prevItem._positionClass || '';
-                        positionClass = prevClass === 'milestone-below' ? 'milestone-above' : 'milestone-below';
+                // Find available row
+                for (let checkRow = 0; checkRow < 10; checkRow++) {
+                    let hasOverlap = false;
+                    for (let i = 0; i < index; i++) {
+                        const prevItem = generalMilestones[i];
+                        const prevRow = prevItem._row || 0;
+                        if (prevRow === checkRow) {
+                            const prevDate = parseLocalDate(prevItem.date);
+                            const prevWeekdays = getWeekdayPosition(minDate, prevDate);
+                            const prevLeft = prevWeekdays * pixelsPerDay;
+
+                            // Check if within spacing distance
+                            if (Math.abs(left - prevLeft) < MILESTONE_SPACING) {
+                                hasOverlap = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!hasOverlap) {
+                        row = checkRow;
+                        break;
                     }
                 }
-                item._positionClass = positionClass;
+                item._row = row;
+                const topOffset = row * ROW_HEIGHT;
 
                 html += `
-                    <div class="timeline-milestone general ${positionClass}" style="left: ${left}px;" title="${escapeHtml(item.name)}\n${formatDate(item.date)}">
+                    <div class="timeline-milestone general" style="left: ${left}px; top: ${5 + topOffset}px;" title="${escapeHtml(item.name)}\n${formatDate(item.date)}">
                         <div class="milestone-diamond"></div>
                         <div class="milestone-label">${escapeHtml(item.name)}</div>
                         <div class="milestone-date">${formatDateShort(item.date)}</div>
@@ -1509,30 +1534,45 @@ async function initApp() {
             // Gridlines are now in global container, not here
 
             // Render milestones with overlap detection
+            let milestoneRowMap = {}; // Track which row each milestone is in
             milestones.forEach((item, index) => {
                 const itemDate = parseLocalDate(item.date);
                 const weekdaysFromStart = getWeekdayPosition(minDate, itemDate);
                 const left = weekdaysFromStart * pixelsPerDay;
 
-                // Check for overlap with previous milestones
-                let positionClass = '';
-                if (index > 0) {
-                    const prevItem = milestones[index - 1];
-                    const prevDate = parseLocalDate(prevItem.date);
-                    const prevWeekdays = getWeekdayPosition(minDate, prevDate);
-                    const prevLeft = prevWeekdays * pixelsPerDay;
+                // Check for overlap with previous milestones (within 14 days / ~70px)
+                let row = 0;
+                const MILESTONE_SPACING = 70; // pixels (~14 weekdays)
+                const ROW_HEIGHT = 30; // vertical offset per row
 
-                    // If milestones are close (within 80px), alternate positioning
-                    if (Math.abs(left - prevLeft) < 80) {
-                        // Check if previous had alternate positioning
-                        const prevClass = prevItem._positionClass || '';
-                        positionClass = prevClass === 'milestone-below' ? 'milestone-above' : 'milestone-below';
+                // Find available row
+                for (let checkRow = 0; checkRow < 10; checkRow++) {
+                    let hasOverlap = false;
+                    for (let i = 0; i < index; i++) {
+                        const prevItem = milestones[i];
+                        const prevRow = prevItem._row || 0;
+                        if (prevRow === checkRow) {
+                            const prevDate = parseLocalDate(prevItem.date);
+                            const prevWeekdays = getWeekdayPosition(minDate, prevDate);
+                            const prevLeft = prevWeekdays * pixelsPerDay;
+
+                            // Check if within spacing distance
+                            if (Math.abs(left - prevLeft) < MILESTONE_SPACING) {
+                                hasOverlap = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!hasOverlap) {
+                        row = checkRow;
+                        break;
                     }
                 }
-                item._positionClass = positionClass;
+                item._row = row;
+                const topOffset = row * ROW_HEIGHT;
 
                 html += `
-                    <div class="timeline-milestone ${positionClass}" style="left: ${left}px;" title="${escapeHtml(item.name)}\n${formatDate(item.date)}">
+                    <div class="timeline-milestone" style="left: ${left}px; top: ${5 + topOffset}px;" title="${escapeHtml(item.name)}\n${formatDate(item.date)}">
                         <div class="milestone-diamond"></div>
                         <div class="milestone-label">${escapeHtml(item.name)}</div>
                         <div class="milestone-date">${formatDateShort(item.date)}</div>
@@ -1653,10 +1693,12 @@ async function initApp() {
 
             const maxRow = Math.max(...activities.map(a => a.assignedRow || 0), -1) + 1;
             const totalActivityHeight = maxRow * 70; // Updated to match new spacing
-            const milestoneHeight = milestones.length > 0 ? 65 : 0;
+            const maxMilestoneRow = milestones.length > 0 ? Math.max(...milestones.map(m => m._row || 0), 0) : 0;
+            const milestoneHeight = milestones.length > 0 ? (65 + maxMilestoneRow * 30) : 0;
             const barHeight = 24; // Height of activity bar
             const labelAboveHeight = 20; // Height of label when positioned above bar
-            const minHeight = Math.max(milestoneHeight + totalActivityHeight + barHeight + labelAboveHeight + 20, 100); // Increased padding
+            const dateBelowHeight = 20; // Additional space for dates below bars
+            const minHeight = Math.max(milestoneHeight + totalActivityHeight + barHeight + labelAboveHeight + dateBelowHeight + 30, 100); // Increased padding
 
             html += `</div>`;
             // Add resize handle (vertical only for workstreams)
@@ -1686,9 +1728,9 @@ async function initApp() {
             const activities = items.filter(i => i.type === 'activity');
 
             const maxRow = activities.length > 0 ? Math.max(...activities.map(a => a.assignedRow || 0), -1) + 1 : 0;
-            const totalActivityHeight = maxRow * 50;
+            const totalActivityHeight = maxRow * 70; // Match the spacing used in rendering
             const milestoneHeight = milestones.length > 0 ? 65 : 0;
-            const workstreamHeight = Math.max(milestoneHeight + totalActivityHeight + 64, 100);
+            const workstreamHeight = Math.max(milestoneHeight + totalActivityHeight + 84, 100); // Added extra padding
             totalTimelineHeight += workstreamHeight;
         });
 
