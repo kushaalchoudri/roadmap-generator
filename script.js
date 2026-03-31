@@ -1525,19 +1525,20 @@ async function initApp() {
                     for (let i = 0; i < activityIndex; i++) {
                         const prevItem = activities[i];
                         if (prevItem.assignedRow === rowIndex) {
-                            const prevStart = new Date(prevItem.startDate);
-                            const prevEndDate = new Date(prevItem.endDate);
-                            const prevDaysFromStart = Math.ceil((prevStart - minDate) / (1000 * 60 * 60 * 24));
-                            const prevDuration = Math.ceil((prevEndDate - prevStart) / (1000 * 60 * 60 * 24)) + 1;
-                            const prevLeft = prevDaysFromStart * pixelsPerDay;
-                            const prevWidth = prevDuration * pixelsPerDay;
+                            const prevStart = parseLocalDate(prevItem.startDate);
+                            const prevEnd = parseLocalDate(prevItem.endDate);
+                            const prevWeekdaysFromStart = getWeekdayPosition(minDate, prevStart);
+                            const prevDurationWeekdays = countWeekdays(prevStart, prevEnd);
+                            const prevLeft = prevWeekdaysFromStart * pixelsPerDay;
+                            const prevWidth = prevDurationWeekdays * pixelsPerDay;
                             const prevVisualWidth = prevWidth + textPadding;
 
                             // Check for visual overlap (including text)
+                            // Use strict inequality - if they touch or overlap, move to next row
                             const currentEnd = left + visualWidth;
                             const prevEnd = prevLeft + prevVisualWidth;
 
-                            if (!(left >= prevEnd || currentEnd <= prevLeft)) {
+                            if (!(left > prevEnd || currentEnd < prevLeft)) {
                                 canFit = false;
                                 break;
                             }
